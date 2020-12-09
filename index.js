@@ -1,6 +1,6 @@
 const MODEL_PATH = './tf_model_t082_unfixed/model.json';
 
-let BIG_SIZE = 1920;
+let BIG_SIZE = 1024;
 
 let WIDTH_SMALL = 640;
 let HEIGHT_SMALL = 480;
