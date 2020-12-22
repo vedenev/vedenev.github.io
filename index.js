@@ -459,7 +459,7 @@ function startCamera() {
   let camera_settings = null;
   let resolution = null;
   if(is_mobile) {
-      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, facingMode: "environment"};
+      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, facingMode: { exact: "environment", }};
       IS_MIRROR = false;
   } else {
       resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}};
