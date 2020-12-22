@@ -128,6 +128,9 @@ let point_down_slow = new Array(2).fill(0);
 let filter_down_fast = null;
 let filter_down_slow = null;
 
+let canvas_output = document.getElementById("canvasOutput")
+let canvas_output_contecxt = canvas_output.getContext("2d");
+let frame_display_rgba = null;
 
 
 function roundAdvancedWithMultiplier(inp, multiplier) {
@@ -834,7 +837,15 @@ function startCamera() {
 
           cv.putText(frame_display, `FPS: ${roundAdvanced(FPS)}  ${frameIndex}`, {x: 10, y: 15}, cv.FONT_HERSHEY_SIMPLEX, 0.4, [255, 0, 0, 255]);
 
-          cv.imshow('canvasOutput', frame_display);
+          //cv.imshow('canvasOutput', frame_display);
+          
+          //canvas_output_contecxt
+          cv.cvtColor(frame_display, frame_display_rgba, cv.COLOR_RGB2RGBA);
+          let imgData = new ImageData(new Uint8ClampedArray(frame_display_rgba.data), frame_display_rgba.cols, frame_display_rgba.rows);
+          canvas_output.width = imgData.width;
+          canvas_output.height = imgData.height;
+          canvas_output_contecxt.putImageData(imgData, 0, 0);
+          
           
           if (isCountFPS) {
               let timeDelta = timeForFPSCount - timeForFPSCountOld;
@@ -921,6 +932,8 @@ function startCamera() {
       } else {
           slow_motion_dist_threshold_per_sec = SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC * width_display;
       }
+      
+      frame_display_rgba = new cv.Mat(height_display, width_display, cv.CV_8UC4);
       
       
     }
