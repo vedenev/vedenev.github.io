@@ -5,8 +5,9 @@
 </head>
 <body>
 <h2>Experiments</h2>
+<p id="status">Загрузка..</p>
 <video style="display: none" id='video' autoPlay muted playsInline ></video>
-<canvas id="canvasOutput" width=640 height=480></canvas>
+<canvas id="canvasOutput" width=640 height=480></canvas>&nbsp;&nbsp;&nbsp;<canvas id="canvasOutputPhoto" width=640 height=480>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
 <script src="./opencv.js"></script>
 <script onload="console.log('cv loaded')" src='./index.js'></script>
