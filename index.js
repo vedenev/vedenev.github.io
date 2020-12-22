@@ -36,7 +36,6 @@ let SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC = 0.3;
 let slow_motion_dist_threshold_per_sec = 0;
 
 let canvasOutput = document.getElementById("canvasOutput")
-let resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}};
 let video = document.getElementById("video");
 const cv = window.cv;
 let streaming = false;
@@ -458,10 +457,12 @@ function startCamera() {
   if (streaming) return;
   is_mobile = mobileDetect();
   let camera_settings = null;
+  let resolution = null;
   if(is_mobile) {
-      camera_settings = {video: resolution, audio: false, facingMode: "environment"};
+      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, facingMode: "environment"};
       IS_MIRROR = false;
   } else {
+      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}};
       camera_settings = {video: resolution, audio: false};
       IS_MIRROR = true;
   }
