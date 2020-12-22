@@ -974,4 +974,6 @@ const main = async () => {
 
 message_index_old = 5;
 status(5);
-main();
+cv['onRuntimeInitialized']=()=>{
+    main();
+}
