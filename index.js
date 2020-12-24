@@ -1,8 +1,9 @@
 let IS_MIRROR = true;
-let DISPLAY_SIZE = 640;
+let DISPLAY_SIZE = 720;
 const MODEL_PATH = './tf_model_t082_unfixed/model.json';
 
 let BIG_SIZE = 1920;
+//let BIG_SIZE = 640;
 
 let START_PHOTO_AT_SUCCESS_FRAME_NO = 2;
 
@@ -17,7 +18,9 @@ let NET_SCALE = 32;
 let PASSPORT_N_POINTS = 6;
 let THRESHOLD = 77; // 0.3 *255
 
-let N_FRAMES_FPS_COUNT = 5
+let N_FRAMES_FPS_COUNT = 5;
+
+let TEXT_SIZE = 0.8;
 
 let UP_PAGE_POINTS_INDEXES = [0, 1, 2, 5]; 
 let DOWN_PAGE_POINTS_INDEXES = [5, 2, 3, 4];
@@ -34,6 +37,7 @@ let FILTER_WINDOW_WIDTH_FAST = 0.8;
 let FILTER_WINDOW_WIDTH_SLOW = 5;
 let SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC = 0.3;
 let slow_motion_dist_threshold_per_sec = 0;
+
 
 let canvasOutput = document.getElementById("canvasOutput")
 let video = document.getElementById("video");
@@ -73,6 +77,8 @@ let FPS = 0.0
 let CountFPSIndex = 0
 
 let net = null;
+
+//let frame_display_rgba_typed_array_tmp = null;
 
 
 zone_y1 = 0;
@@ -128,9 +134,27 @@ let point_down_slow = new Array(2).fill(0);
 let filter_down_fast = null;
 let filter_down_slow = null;
 
+let canvas_input_hidden = document.getElementById("canvasInputHidden");
+let canvas_input_hidden_context = canvas_input_hidden.getContext("2d");
+let canvas_input_hidden_context_imageData = null;
+
+
 let canvas_output = document.getElementById("canvasOutput")
-let canvas_output_contecxt = canvas_output.getContext("2d");
+let canvas_output_context = canvas_output.getContext("2d");
 let frame_display_rgba = null;
+let frame_display_clamped_array = null;
+
+let canvas_output_photo = document.getElementById("canvasOutputPhoto")
+let canvas_output_photo_context = canvas_output_photo.getContext("2d");
+let frame_display_photo_rgba = null;
+let frame_display_photo_rgba_clamped_array = null;
+
+let is_after_photo = true;
+
+let canvas_input_hidden_context_image_data = null;
+let canvas_input_hidden_context_image_data_data = null;
+let frame_display_rgba_data = null;
+//                let first_time_tmp = true;
 
 
 function roundAdvancedWithMultiplier(inp, multiplier) {
@@ -448,6 +472,13 @@ function dist_2d(point_1, point_2) {
     return Math.sqrt(diff_x * diff_x + diff_y * diff_y);
 }
 
+function imshow_with_context(frame_rgba, frame_rgba_clamped_array, canvas_context) {
+    frame_rgba_clamped_array.set(frame_rgba.data);
+    let imgData = new ImageData(frame_rgba_clamped_array, frame_rgba.cols, frame_rgba.rows);
+    canvas_context.putImageData(imgData, 0, 0);
+    delete imgData;
+}
+
 const mobileDetect = () => {
   let check = false;
   if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
@@ -466,7 +497,7 @@ function startCamera() {
       camera_settings = {video: resolution, audio: false};
       IS_MIRROR = false;
   } else {
-      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}};
+      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, frameRate: { ideal: 20, max: 25 } };
       camera_settings = {video: resolution, audio: false};
       IS_MIRROR = true;
   }
@@ -483,17 +514,51 @@ function startCamera() {
               timeForFPSCount = performance.now();
           }
           
-          videoCapture.read(frame);
           
-          //cv.resize(frame, frame_small, size_small, 0, 0, cv.INTER_LINEAR);
-          //cv.putText(frame_small, `FPS: ${roundAdvanced(FPS)}  ${frameIndex}  ${width}x${height}`, {x: 10, y: 15}, cv.FONT_HERSHEY_SIMPLEX, 0.4, [255, 0, 0, 255]);
-          //cv.imshow('canvasOutput', frame_small);
+          if (is_after_photo) {
+              canvas_input_hidden.width = width_display;
+              canvas_input_hidden.height = height_display;
+              is_after_photo = false;
+          }
+          canvas_input_hidden_context.drawImage(video, 0, 0, width, height, 0, 0, width_display, height_display);
+
+          canvas_input_hidden_context_image_data = canvas_input_hidden_context.getImageData(0, 0, width_display, height_display);
+          canvas_input_hidden_context_image_data_data = canvas_input_hidden_context_image_data.data;
           
-          cv.cvtColor(frame, frame_rgb, cv.COLOR_RGBA2RGB);
-          cv.resize(frame_rgb, frame_inside, size_inside, 0, 0, cv.INTER_LINEAR);
-          cv.resize(frame_rgb, frame_display, size_display, 0, 0, cv.INTER_LINEAR);
-          frame_display.copyTo(frame_display_photo);
-          frame_display
+          
+          frame_display_rgba_data = frame_display_rgba.data;
+          //                     first_time_tmp = false;
+
+          frame_display_rgba_data.set(canvas_input_hidden_context_image_data_data); // works, original from capture.read()
+          
+          
+          
+          
+          //frame_display_rgba_typed_array_tmp.set(canvas_input_hidden_context_image_data_data); // roughly same time as Mat
+          
+          //frame_display_rgba.ucharPtr = canvas_input_hidden_context_image_data_data; // works incorectly
+          
+          //frame_display_rgba.data = canvas_input_hidden_context_image_data_data; // not works as .data is read only
+          
+          
+          //delete frame_display_rgba;
+          //let frame_display_rgba = cv.matFromImageData(canvas_input_hidden_context_image_data); // works but out of memory
+                    
+          
+          
+          
+          
+          
+          delete canvas_input_hidden_context_image_data_data;
+          delete canvas_input_hidden_context_image_data;
+          
+          
+          
+          //cv.cvtColor(frame, frame_rgb, cv.COLOR_RGBA2RGB);
+          cv.cvtColor(frame_display_rgba, frame_display, cv.COLOR_RGBA2RGB);
+          //cv.resize(frame_rgb, frame_display, size_display, 0, 0, cv.INTER_LINEAR);
+          cv.resize(frame_display, frame_inside, size_inside, 0, 0, cv.INTER_LINEAR);
+          //frame_display.copyTo(frame_display_photo);
           if (IS_MIRROR) {
               cv.flip(frame_display, frame_display, +1);
           }
@@ -504,23 +569,25 @@ function startCamera() {
               const frame_normailzed_tf = frame_tf.div(offset);
 
               const frame_batched_tf = frame_normailzed_tf.reshape([1, net_input_size_y, net_input_size_x, 3]);
-              return net.predict(frame_batched_tf).squeeze();
+              return net.predict(frame_batched_tf).squeeze().clipByValue(0, 1).mul(offset);
+              
           });
           //await tf_processing.arraySync();
           tf_processing.arraySync();
           
           
-          //cv.putText(frame_net_input, `FPS: ${roundAdvanced(FPS)}  ${frameIndex}  ${width}x${height}`, {x: 10, y: 15}, cv.FONT_HERSHEY_SIMPLEX, 0.4, [255, 0, 0, 255]);
-          //cv.imshow('canvasOutput', frame_net_input);
           
           let is_all_points = 1;
           n_points_detected = 0;
           const heatmaps = tf.split(tf_processing, PASSPORT_N_POINTS, 2);
           heatmaps.map((heatmap, index)=>{
-            const heatmap_cliped = heatmap.dataSync().map((pixel) => pixel < 0.0 ? 0.0 : pixel > 1.0 ? 1.0 : pixel*255)
-            const heatmap_cv = cv.matFromArray(net_output_size_y, net_output_size_x, cv.CV_8UC1, heatmap_cliped);
-            //cv.imshow('crop'+ index, heatmap_cv);
+          
+            const heatmap_data  = heatmap.dataSync();
+            
+            const heatmap_cv = cv.matFromArray(net_output_size_y, net_output_size_x, cv.CV_8UC1, heatmap_data);
             cv.threshold(heatmap_cv, heatmap_binarized, THRESHOLD, 255, cv.THRESH_BINARY);
+
+            
             const stats = new cv.Mat ();// value and area value forming the bounding box
             const centroids = new cv.Mat ();// centroid (x, y) (CV_64FC1)
             let n_labels = cv.connectedComponentsWithStats(heatmap_binarized, labels, stats, centroids, 4, cv.CV_16U);
@@ -543,13 +610,15 @@ function startCamera() {
                 let x_spot_out = 0.0;
                 let y_spot_out = 0.0;
                 let weights_sum = 0.0;
+                let labels_data16U = labels.data16U;
+                let heatmap_cv_data = heatmap_cv.data;
                 for (let y = 0; y < net_output_size_y; y++) {
                     for (let x = 0; x < net_output_size_x; x++) {
-                        if(labels.data16U[pixel_index] == max_ind) {
+                        if(labels_data16U[pixel_index] == max_ind) {
                             
-                            weights_sum += heatmap_cv.data[pixel_index];  
-                            x_spot_out += heatmap_cv.data[pixel_index] * x;
-                            y_spot_out += heatmap_cv.data[pixel_index] * y;
+                            weights_sum += heatmap_cv_data[pixel_index];  
+                            x_spot_out += heatmap_cv_data[pixel_index] * x;
+                            y_spot_out += heatmap_cv_data[pixel_index] * y;
                         }
                         pixel_index++;
                     }
@@ -747,8 +816,17 @@ function startCamera() {
                   all_all_ok = true;
                   if (success_frame_no >= START_PHOTO_AT_SUCCESS_FRAME_NO) {
                       status(0);
-                      cv.putText(frame_display_photo, `${frameIndex}`, {x: 10, y: 15}, cv.FONT_HERSHEY_SIMPLEX, 0.4, [255, 0, 0, 255]);
-                      cv.imshow("canvasOutputPhoto", frame_display_photo);
+                      
+
+                      canvas_input_hidden.width = width;
+                      canvas_input_hidden.height = height;
+                      canvas_input_hidden_context.drawImage(video, 0, 0, width, height);
+                      frame_display_photo_rgba.data.set(canvas_input_hidden_context.getImageData(0, 0, width, height).data);
+                      cv.putText(frame_display_photo_rgba, `${frameIndex}`, {x: 10, y: 25}, cv.FONT_HERSHEY_SIMPLEX, TEXT_SIZE, [255, 0, 0, 255]);
+
+                      imshow_with_context(frame_display_photo_rgba, frame_display_photo_rgba_clamped_array, canvas_output_photo_context);
+                      
+                      is_after_photo = true;
                   }
               } else {
                   status(6);
@@ -834,17 +912,33 @@ function startCamera() {
               }
           }
           
-
-          cv.putText(frame_display, `FPS: ${roundAdvanced(FPS)}  ${frameIndex}`, {x: 10, y: 15}, cv.FONT_HERSHEY_SIMPLEX, 0.4, [255, 0, 0, 255]);
-
-          //cv.imshow('canvasOutput', frame_display);
           
-          //canvas_output_contecxt
+          
+          cv.putText(frame_display, `FPS: ${roundAdvanced(FPS)} ${width}x${height} ${frameIndex}`, {x: 10, y: 25}, cv.FONT_HERSHEY_SIMPLEX, TEXT_SIZE, [255, 0, 0, 255]);
+
+          //imshow_with_context(frame_display, frame_display_rgba, canvas_output, canvas_output_context);
+          
+          //function imshow_with_context(frame, frame_rgba, canvas, canvas_context) {
+          //      cv.cvtColor(frame, frame_rgba, cv.COLOR_RGB2RGBA);
+          //      let frame_rgba_clamped_array = new Uint8ClampedArray(frame_rgba.data);
+          //      let imgData = new ImageData(frame_rgba_clamped_array, frame_rgba.cols, frame_rgba.rows);
+          //      canvas.width = imgData.width;
+          //      canvas.height = imgData.height;
+          //      canvas_context.putImageData(imgData, 0, 0);
+          //      delete frame_rgba_clamped_array;
+          //      delete imgData;
+          //  }
+          
+          //cv.cvtColor(frame_display, frame_display_rgba, cv.COLOR_RGB2RGBA);
+          //frame_display_clamped_array.set(frame_display_rgba.data);
+          //let imgData = new ImageData(frame_display_clamped_array, frame_display_rgba.cols, frame_display_rgba.rows);
+          //canvas_output.width = imgData.width;
+          //canvas_output.height = imgData.height;
+          //canvas_output_context.putImageData(imgData, 0, 0);
+          
           cv.cvtColor(frame_display, frame_display_rgba, cv.COLOR_RGB2RGBA);
-          let imgData = new ImageData(new Uint8ClampedArray(frame_display_rgba.data), frame_display_rgba.cols, frame_display_rgba.rows);
-          canvas_output.width = imgData.width;
-          canvas_output.height = imgData.height;
-          canvas_output_contecxt.putImageData(imgData, 0, 0);
+          imshow_with_context(frame_display_rgba, frame_display_clamped_array, canvas_output_context);
+          
           
           
           if (isCountFPS) {
@@ -860,8 +954,10 @@ function startCamera() {
       }
       //canvasOutputContext.drawImage(video, 0, 0);
       requestAnimationFrame(step)
+      //setTimeout(step, 10);
     }
     requestAnimationFrame(step);
+    //setTimeout(step, 10);
   })
     .catch(function(err) {
     console.log("An error occured! " + err);
@@ -873,8 +969,11 @@ function startCamera() {
       width = video.videoWidth;
       video.setAttribute("width", width);
       video.setAttribute("height", height);
+      
+      
       streaming = true;
-      videoCapture = new cv.VideoCapture(video);
+      //videoCapture = new cv.VideoCapture(video);
+      
       frame = new cv.Mat(height, width, cv.CV_8UC4);
       frame_rgb = new cv.Mat(height, width, cv.CV_8UC3);
       frame_aspect_ratio = width / height;
@@ -908,6 +1007,12 @@ function startCamera() {
       canvasOutput.style.width = width_display.toString();
       canvasOutput.style.height = height_display.toString();
       
+      canvas_output_photo.width = width;
+      canvas_output_photo.height = height;
+      
+      canvas_output.width = width_display;
+      canvas_output.height = height_display;
+      
       is_frame_wider = frame_aspect_ratio > PASSPORT_ASPECT_RATIO;
       
       zone_y1 = roundSimple(ZONE_SIZE_RELATIVE * height_display);
@@ -919,7 +1024,7 @@ function startCamera() {
       left_zone_rect = new cv.Rect(0, 0 , zone_x1, height_display);
       right_zone_rect = new cv.Rect(zone_x2, 0 , zone_x1, height_display);
       
-      frame_display_photo = new cv.Mat(height_display, width_display, cv.CV_8UC3);
+      
       
       filter_up_fast = new EmaFilter2D(FILTER_WINDOW_WIDTH_FAST);
       filter_up_slow = new EmaFilter2D(FILTER_WINDOW_WIDTH_SLOW);
@@ -934,6 +1039,13 @@ function startCamera() {
       }
       
       frame_display_rgba = new cv.Mat(height_display, width_display, cv.CV_8UC4);
+      frame_display_clamped_array = new Uint8ClampedArray(frame_display_rgba.data);
+      
+      frame_display_photo = new cv.Mat(height, width, cv.CV_8UC3);
+      frame_display_photo_rgba = new cv.Mat(height, width, cv.CV_8UC4);
+      frame_display_photo_rgba_clamped_array = new Uint8ClampedArray(frame_display_photo_rgba.data);
+      
+      //frame_display_rgba_typed_array_tmp = new Uint8Array(frame_display_photo_rgba.data);
       
       
     }
