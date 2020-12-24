@@ -1,9 +1,14 @@
 let IS_MIRROR = true;
 let DISPLAY_SIZE = 720;
+let DISPLAY_SIZE_DESKTOP = 720;
+let DISPLAY_SIZE_MOBILE = 1440;
 const MODEL_PATH = './tf_model_t082_unfixed/model.json';
 
 let BIG_SIZE = 1920;
 //let BIG_SIZE = 640;
+
+let STATUS_TEXT_SIZE_DESKTOP = '20px';
+let STATUS_TEXT_SIZE_MOBILE = '40px';
 
 let START_PHOTO_AT_SUCCESS_FRAME_NO = 2;
 
@@ -21,6 +26,7 @@ let THRESHOLD = 77; // 0.3 *255
 let N_FRAMES_FPS_COUNT = 5;
 
 let TEXT_SIZE = 0.8;
+let TEXT_THICKNESS = 2.0;
 
 let UP_PAGE_POINTS_INDEXES = [0, 1, 2, 5]; 
 let DOWN_PAGE_POINTS_INDEXES = [5, 2, 3, 4];
@@ -155,6 +161,8 @@ let canvas_input_hidden_context_image_data = null;
 let canvas_input_hidden_context_image_data_data = null;
 let frame_display_rgba_data = null;
 //                let first_time_tmp = true;
+
+let statusElement = document.getElementById('status');
 
 
 function roundAdvancedWithMultiplier(inp, multiplier) {
@@ -493,14 +501,19 @@ function startCamera() {
   let camera_settings = null;
   let resolution = null;
   if(is_mobile) {
+      statusElement.style.fontSize = STATUS_TEXT_SIZE_MOBILE;
       resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, facingMode: "environment"};
       camera_settings = {video: resolution, audio: false};
+      DISPLAY_SIZE = DISPLAY_SIZE_MOBILE;
       IS_MIRROR = false;
   } else {
+      statusElement.style.fontSize = STATUS_TEXT_SIZE_DESKTOP;
       resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, frameRate: { ideal: 20, max: 25 } };
       camera_settings = {video: resolution, audio: false};
+      DISPLAY_SIZE = DISPLAY_SIZE_DESKTOP;
       IS_MIRROR = true;
   }
+  status(5);
   navigator.mediaDevices.getUserMedia(camera_settings)
     .then(function(s) {
     stream = s;
@@ -822,7 +835,7 @@ function startCamera() {
                       canvas_input_hidden.height = height;
                       canvas_input_hidden_context.drawImage(video, 0, 0, width, height);
                       frame_display_photo_rgba.data.set(canvas_input_hidden_context.getImageData(0, 0, width, height).data);
-                      cv.putText(frame_display_photo_rgba, `${frameIndex}`, {x: 10, y: 25}, cv.FONT_HERSHEY_SIMPLEX, TEXT_SIZE, [255, 0, 0, 255]);
+                      cv.putText(frame_display_photo_rgba, `${frameIndex}`, {x: 10, y: 25}, cv.FONT_HERSHEY_SIMPLEX, TEXT_SIZE, [255, 0, 0, 255], TEXT_THICKNESS);
 
                       imshow_with_context(frame_display_photo_rgba, frame_display_photo_rgba_clamped_array, canvas_output_photo_context);
                       
@@ -914,7 +927,7 @@ function startCamera() {
           
           
           
-          cv.putText(frame_display, `FPS: ${roundAdvanced(FPS)} ${width}x${height} ${frameIndex}`, {x: 10, y: 25}, cv.FONT_HERSHEY_SIMPLEX, TEXT_SIZE, [255, 0, 0, 255]);
+          cv.putText(frame_display, `FPS: ${roundAdvanced(FPS)} ${width}x${height} ${frameIndex}`, {x: 10, y: 25}, cv.FONT_HERSHEY_SIMPLEX, TEXT_SIZE, [255, 0, 0, 255], TEXT_THICKNESS);
 
           //imshow_with_context(frame_display, frame_display_rgba, canvas_output, canvas_output_context);
           
@@ -1052,7 +1065,7 @@ function startCamera() {
   }, false);
 }
 
-const statusElement = document.getElementById('status');
+
 const status = message_index => {
     if (message_index != message_index_old)
     {
