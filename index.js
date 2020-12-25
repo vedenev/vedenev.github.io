@@ -1,7 +1,7 @@
 let IS_MIRROR = true;
-let DISPLAY_SIZE = 720;
-let DISPLAY_SIZE_DESKTOP = 720;
-let DISPLAY_SIZE_MOBILE = 1440;
+let DISPLAY_SIZE = 640;
+let DISPLAY_SIZE_DESKTOP = 640;
+let DISPLAY_SIZE_MOBILE = 1280;
 const MODEL_PATH = './tf_model_t082_unfixed/model.json';
 
 let BIG_SIZE = 1920;
@@ -146,6 +146,10 @@ let filter_down_slow = null;
 let canvas_input_hidden = document.getElementById("canvasInputHidden");
 let canvas_input_hidden_context = canvas_input_hidden.getContext("2d");
 let canvas_input_hidden_context_imageData = null;
+
+let canvas_input_hidden_2 = document.getElementById("canvasInputHidden2");
+let canvas_input_hidden_2_context = canvas_input_hidden_2.getContext("2d");
+let canvas_input_hidden_2_context_imageData = null;
 
 
 let canvas_output = document.getElementById("canvasOutput")
@@ -957,10 +961,25 @@ function startCamera() {
           cv.cvtColor(frame_display, frame_display_rgba, cv.COLOR_RGB2RGBA);
           //imshow_with_context(frame_display_rgba, frame_display_clamped_array, canvas_output_context);
           
+          
+          
           frame_display_clamped_array.set(frame_display_rgba.data);
           let imgData = new ImageData(frame_display_clamped_array, frame_display_rgba.cols, frame_display_rgba.rows);
-          canvas_output_context.putImageData(imgData, 0, 0);
+          //canvas_output_context.putImageData(imgData, 0, 0);
+          
+          canvas_input_hidden_2.width = frame_display_rgba.cols;
+          canvas_input_hidden_2.height = frame_display_rgba.rows;
+          canvas_input_hidden_2_context.putImageData(imgData, 0, 0);
+          canvas_output.width = 2 * frame_display_rgba.cols;
+          canvas_output.height = 2 * frame_display_rgba.rows;
+          canvas_output_context.drawImage(canvas_input_hidden_2, 0, 0, frame_display_rgba.cols, frame_display_rgba.rows, 0, 0, 2 * frame_display_rgba.cols, 2 * frame_display_rgba.rows);
+          
+          
           delete imgData;
+          
+          
+          
+          
           
           
           
@@ -976,10 +995,12 @@ function startCamera() {
           frameIndex += 1;
       }
       //canvasOutputContext.drawImage(video, 0, 0);
-      requestAnimationFrame(step)
+      //requestAnimationFrame(step);
+      video.requestVideoFrameCallback(step);
       //setTimeout(step, 10);
     }
-    requestAnimationFrame(step);
+    //requestAnimationFrame(step);
+    video.requestVideoFrameCallback(step);
     //setTimeout(step, 10);
   })
     .catch(function(err) {
@@ -1027,8 +1048,8 @@ function startCamera() {
       points_display_resize_factor_x = width_display / width_inside;
       points_display_resize_factor_y = height_display / height_inside;
       
-      canvasOutput.style.width = width_display.toString();
-      canvasOutput.style.height = height_display.toString();
+      //canvasOutput.style.width = width_display.toString();
+      //canvasOutput.style.height = height_display.toString();
       
       canvas_output_photo.width = width;
       canvas_output_photo.height = height;
@@ -1069,6 +1090,11 @@ function startCamera() {
       frame_display_photo_rgba_clamped_array = new Uint8ClampedArray(frame_display_photo_rgba.data);
       
       //frame_display_rgba_typed_array_tmp = new Uint8Array(frame_display_photo_rgba.data);
+      
+      //canvas_input_hidden_2 = document.getElementById("canvasInputHidden2");
+      //canvas_input_hidden_2_context = canvas_input_hidden_2.getContext("2d");
+      //canvas_input_hidden_2_context_imageData = null;
+      
       
       
     }
