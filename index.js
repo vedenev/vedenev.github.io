@@ -8,7 +8,10 @@ let BIG_SIZE = 1920;
 //let BIG_SIZE = 640;
 
 let STATUS_TEXT_SIZE_DESKTOP = '20px';
+let DISPLAY_CANVAS_ZOOM_DESKTOP = 1;
+
 let STATUS_TEXT_SIZE_MOBILE = '40px';
+let DISPLAY_CANVAS_ZOOM_MOBILE = 1;
 
 let START_PHOTO_AT_SUCCESS_FRAME_NO = 2;
 
@@ -506,11 +509,13 @@ function startCamera() {
       camera_settings = {video: resolution, audio: false};
       DISPLAY_SIZE = DISPLAY_SIZE_MOBILE;
       IS_MIRROR = false;
+      //canvas_output_context.scale(DISPLAY_CANVAS_ZOOM_MOBILE, DISPLAY_CANVAS_ZOOM_MOBILE);
   } else {
       statusElement.style.fontSize = STATUS_TEXT_SIZE_DESKTOP;
       resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, frameRate: { ideal: 20, max: 25 } };
       camera_settings = {video: resolution, audio: false};
       DISPLAY_SIZE = DISPLAY_SIZE_DESKTOP;
+      //canvas_output_context.scale(DISPLAY_CANVAS_ZOOM_DESKTOP, DISPLAY_CANVAS_ZOOM_DESKTOP);
       IS_MIRROR = true;
   }
   status(5);
@@ -950,7 +955,12 @@ function startCamera() {
           //canvas_output_context.putImageData(imgData, 0, 0);
           
           cv.cvtColor(frame_display, frame_display_rgba, cv.COLOR_RGB2RGBA);
-          imshow_with_context(frame_display_rgba, frame_display_clamped_array, canvas_output_context);
+          //imshow_with_context(frame_display_rgba, frame_display_clamped_array, canvas_output_context);
+          
+          frame_display_clamped_array.set(frame_display_rgba.data);
+          let imgData = new ImageData(frame_display_clamped_array, frame_display_rgba.cols, frame_display_rgba.rows);
+          canvas_output_context.putImageData(imgData, 0, 0);
+          delete imgData;
           
           
           
