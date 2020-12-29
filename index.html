@@ -1,95 +1,119 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Display Webcam Stream</title>
+<title>Experiments</title>
 </head>
- 
 <body>
-<p id="status">here must be FPS value</p>
-<video autoplay="true" id="video"></video>
+<h2>Experiments</h2>
+<p id="status">Загрузка..</p>
+<video  id='video' autoPlay muted playsInline ></video>
+<canvas id="canvasOutput" width=720 height=540></canvas>
 <script>
-let N_FRAMES_MAX = 100
+
 let BIG_SIZE = 1920;
-let SMALL_SIZE = 384;
+
 let N_FRAMES_FPS_COUNT = 5;
-let statusElement = document.getElementById('status');
+
+
+let height = 0;
+let width = 0;
+
+let canvasOutput = document.getElementById("canvasOutput")
 let video = document.getElementById("video");
-let timeForFPSCountOld = performance.now();
-let CountFPSIndex = 0;
-let FPS = 0;
-let frameIndex = 0;
-
 let streaming = false;
+let stream = null;
 
-const doSomethingWithTheFrame = (now, metadata) => {
-  if (!streaming) {
-      video.requestVideoFrameCallback(doSomethingWithTheFrame);
-      return;
+let timeForFPSCount = performance.now();
+let timeForFPSCountOld = timeForFPSCount;
+let frameIndex = 0
+let FPS = 0.0
+let CountFPSIndex = 0
+
+
+
+const mobileDetect = () => {
+  let check = false;
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    check = true;
   }
-  // Do something with the frame.
-  //console.log(now, metadata);
-  
-  let isCountFPS = frameIndex % N_FRAMES_FPS_COUNT == 0;
-          
-  if (isCountFPS) {
-      timeForFPSCount = performance.now();
-  }
-  
-  if (isCountFPS) {
-      let timeDelta = timeForFPSCount - timeForFPSCountOld;
-      let timeDeltaSec = timeDelta / 1000;
-      FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
-      //console.log(FPS);
-      statusElement.innerHTML = FPS.toString(10);
-      timeForFPSCountOld = timeForFPSCount;
-      CountFPSIndex++;
-  }
-  
-  
-  if (frameIndex < N_FRAMES_MAX) {
-      // Re-register the callback to be notified about the next frame
-      video.requestVideoFrameCallback(doSomethingWithTheFrame);
-  } else if (frameIndex == N_FRAMES_MAX){
-      streaming = false;
-      set_resolution(BIG_SIZE);
-  } else {
-      video.requestVideoFrameCallback(doSomethingWithTheFrame);
-  }
-  
-  frameIndex++;
-  
+  return check;
 };
 
-function set_resolution(size) {
-    // Initially register the callback to be notified about the first frame
-    if (streaming) return;
-    resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 }, facingMode: "environment" };
-    //resolution = {width: {ideal: size}, height: {ideal: size}};
-    camera_settings = {video: resolution, audio: false};
-    navigator.mediaDevices.getUserMedia(camera_settings)
-        .then(function(stream) {
-        video.srcObject = stream;
-        video.play();
-        video.requestVideoFrameCallback(doSomethingWithTheFrame);
-        }).catch(function(err) {
-        console.log("An error occured! " + err);
-          });
-    
-    video.addEventListener("canplay", function(ev){
-        if (!streaming) {
-          height = video.videoHeight;
-          width = video.videoWidth;
-          video.setAttribute("width", width);
-          video.setAttribute("height", height);
+function startCamera() {
+  if (streaming) return;
+  is_mobile = mobileDetect();
+  let camera_settings = null;
+  let resolution = null;
+  if(is_mobile) {
+      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, facingMode: "environment"};
+      camera_settings = {video: resolution, audio: false};
+      
+  } else {
+      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, frameRate: { ideal: 20, max: 25 } };
+      camera_settings = {video: resolution, audio: false};
+      
+  }
+
+  navigator.mediaDevices.getUserMedia(camera_settings)
+    .then(function(s) {
+    stream = s;
+    video.srcObject = s;
+    video.play();
+    function step() {
+      if (streaming) {
+          let isCountFPS = frameIndex % N_FRAMES_FPS_COUNT == 0;
+          
+          if (isCountFPS) {
+              timeForFPSCount = performance.now();
+          }
           
           
-          streaming = true;
-        }
-    }, false);
+          
+          
+          if (isCountFPS) {
+              let timeDelta = timeForFPSCount - timeForFPSCountOld;
+              let timeDeltaSec = timeDelta / 1000;
+              FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
+              timeForFPSCountOld = timeForFPSCount;
+              CountFPSIndex++;
+          }
+          
+          
+          frameIndex += 1;
+      }
+
+      video.requestVideoFrameCallback(step);
+
+    }
+
+    video.requestVideoFrameCallback(step);
+  })
+    .catch(function(err) {
+    console.log("An error occured! " + err);
+  });
+
+  video.addEventListener("canplay", function(ev){
+    if (!streaming) {
+      height = video.videoHeight;
+      width = video.videoWidth;
+      video.setAttribute("width", width);
+      video.setAttribute("height", height);
+      
+      
+      streaming = true;
+      
+      
+    }
+  }, false);
 }
 
+
+
+
+
+
 const main = async () => {
-    set_resolution(SMALL_SIZE);
+  startCamera();
 }
 
 main();
