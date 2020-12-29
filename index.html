@@ -8,9 +8,8 @@
 <p id="status">here must be FPS value</p>
 <video autoplay="true" id="video"></video>
 <script>
-let N_FRAMES_MAX = 100
-let BIG_SIZE = 1920;
-let SMALL_SIZE = 384;
+//let BIG_SIZE = 1920;
+let BIG_SIZE = 640;
 let N_FRAMES_FPS_COUNT = 5;
 let statusElement = document.getElementById('status');
 let video = document.getElementById("video");
@@ -18,7 +17,6 @@ let timeForFPSCountOld = performance.now();
 let CountFPSIndex = 0;
 let FPS = 0;
 let frameIndex = 0;
-
 const doSomethingWithTheFrame = (now, metadata) => {
   // Do something with the frame.
   //console.log(now, metadata);
@@ -39,33 +37,21 @@ const doSomethingWithTheFrame = (now, metadata) => {
       CountFPSIndex++;
   }
   
-  
-  if (frameIndex < N_FRAMES_MAX) {
-      // Re-register the callback to be notified about the next frame
-      video.requestVideoFrameCallback(doSomethingWithTheFrame);
-  } else if (frameIndex == N_FRAMES_MAX){
-      set_resolution(BIG_SIZE);
-  } else {
-      video.requestVideoFrameCallback(doSomethingWithTheFrame);
-  }
-  
   frameIndex++;
+  
+  
+  // Re-register the callback to be notified about the next frame
+  video.requestVideoFrameCallback(doSomethingWithTheFrame);
 };
-
-function set_resolution(size) {
-    // Initially register the callback to be notified about the first frame
-    resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 } };
-    camera_settings = {video: resolution, audio: false};
-    navigator.mediaDevices.getUserMedia(camera_settings)
-        .then(function(stream) {
-        video.srcObject = stream;
-        video.play();
-        video.requestVideoFrameCallback(doSomethingWithTheFrame);
-        });
-}
-
-set_resolution(SMALL_SIZE);
-
+// Initially register the callback to be notified about the first frame
+resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, frameRate: { ideal: 20, max: 25 } };
+camera_settings = {video: resolution, audio: false};
+navigator.mediaDevices.getUserMedia(camera_settings)
+    .then(function(stream) {
+    video.srcObject = stream;
+    video.play();
+    video.requestVideoFrameCallback(doSomethingWithTheFrame);
+    });
 </script>
 </body>
 </html>
