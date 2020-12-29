@@ -58,7 +58,7 @@ const doSomethingWithTheFrame = (now, metadata) => {
 function set_resolution(size) {
     // Initially register the callback to be notified about the first frame
     if (streaming) return;
-    resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 } };
+    resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 }, facingMode: "environment" };
     camera_settings = {video: resolution, audio: false};
     navigator.mediaDevices.getUserMedia(camera_settings)
         .then(function(stream) {
