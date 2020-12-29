@@ -1,17 +1,91 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Experiments</title>
+<title>Display Webcam Stream</title>
 </head>
+ 
 <body>
-<h2>Experiments</h2>
-<p id="status">Загрузка..</p>
-<video style="display: none" id='video' autoPlay muted playsInline ></video>
-<canvas id="canvasInputHidden" width=720 height=540 style="display: none"></canvas>
-<canvas id="canvasInputHidden2" width=720 height=540 style="display: none"></canvas>
-<canvas id="canvasOutput" width=720 height=540></canvas>&nbsp;&nbsp;&nbsp;<canvas id="canvasOutputPhoto" width=720 height=540></canvas>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
-<script src="./opencv.js"></script>
-<script onload="console.log('cv loaded')" src='./index.js'></script>
+<p id="status">here must be FPS value</p>
+<video autoplay="true" id="video"></video>
+<script>
+let N_FRAMES_MAX = 100
+let BIG_SIZE = 1920;
+let SMALL_SIZE = 384;
+let N_FRAMES_FPS_COUNT = 5;
+let statusElement = document.getElementById('status');
+let video = document.getElementById("video");
+let timeForFPSCountOld = performance.now();
+let CountFPSIndex = 0;
+let FPS = 0;
+let frameIndex = 0;
+
+let streaming = false;
+
+const doSomethingWithTheFrame = (now, metadata) => {
+  // Do something with the frame.
+  //console.log(now, metadata);
+  
+  let isCountFPS = frameIndex % N_FRAMES_FPS_COUNT == 0;
+          
+  if (isCountFPS) {
+      timeForFPSCount = performance.now();
+  }
+  
+  if (isCountFPS) {
+      let timeDelta = timeForFPSCount - timeForFPSCountOld;
+      let timeDeltaSec = timeDelta / 1000;
+      FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
+      //console.log(FPS);
+      statusElement.innerHTML = FPS.toString(10);
+      timeForFPSCountOld = timeForFPSCount;
+      CountFPSIndex++;
+  }
+  
+  
+  if (frameIndex < N_FRAMES_MAX) {
+      // Re-register the callback to be notified about the next frame
+      video.requestVideoFrameCallback(doSomethingWithTheFrame);
+  } else if (frameIndex == N_FRAMES_MAX){
+      streaming = false;
+      set_resolution(BIG_SIZE);
+  } else {
+      video.requestVideoFrameCallback(doSomethingWithTheFrame);
+  }
+  
+  frameIndex++;
+};
+
+function set_resolution(size) {
+    // Initially register the callback to be notified about the first frame
+    //if (streaming) return;
+    resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 }, facingMode: "environment" };
+    camera_settings = {video: resolution, audio: false};
+    navigator.mediaDevices.getUserMedia(camera_settings)
+        .then(function(stream) {
+        video.srcObject = stream;
+        video.play();
+        video.requestVideoFrameCallback(doSomethingWithTheFrame);
+        });
+    
+    video.addEventListener("canplay", function(ev){
+        if (!streaming) {
+          height = video.videoHeight;
+          width = video.videoWidth;
+          video.setAttribute("width", width);
+          video.setAttribute("height", height);
+          
+          
+          streaming = true;
+        }
+    });
+}
+
+const main = async () => {
+    set_resolution(SMALL_SIZE);
+}
+
+main();
+
+</script>
 </body>
 </html>
