@@ -22,6 +22,10 @@ let frameIndex = 0;
 let streaming = false;
 
 const doSomethingWithTheFrame = (now, metadata) => {
+  if (!streaming) {
+      video.requestVideoFrameCallback(doSomethingWithTheFrame);
+      return;
+  }
   // Do something with the frame.
   //console.log(now, metadata);
   
@@ -53,13 +57,14 @@ const doSomethingWithTheFrame = (now, metadata) => {
   }
   
   frameIndex++;
+  
 };
 
 function set_resolution(size) {
     // Initially register the callback to be notified about the first frame
-    //if (streaming) return;
-    //resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 }, facingMode: "environment" };
-    resolution = {width: {ideal: size}, height: {ideal: size}};
+    if (streaming) return;
+    resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 }, facingMode: "environment" };
+    //resolution = {width: {ideal: size}, height: {ideal: size}};
     camera_settings = {video: resolution, audio: false};
     navigator.mediaDevices.getUserMedia(camera_settings)
         .then(function(stream) {
