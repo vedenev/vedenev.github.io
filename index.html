@@ -6,8 +6,7 @@
 <body>
 <h2>Experiments</h2>
 <p id="status">Загрузка..</p>
-<video  id='video' autoPlay muted playsInline ></video>
-<canvas id="canvasOutput" width=720 height=540></canvas>
+<video  id='video'></video>
 <script>
 
 let BIG_SIZE = 1920;
@@ -55,13 +54,15 @@ function step() {
       }
       
       
+      
+      
+      
       frameIndex += 1;
   }
-
-  //video.requestVideoFrameCallback(step);
   
+  //video.requestVideoFrameCallback(step);
   if (frameIndex < N_FRAMES_MAX) {
-      // Re-register the callback to be notified about the next frame
+  //    // Re-register the callback to be notified about the next frame
       video.requestVideoFrameCallback(step);
   } else if (frameIndex == N_FRAMES_MAX){
       streaming = false;
@@ -70,6 +71,7 @@ function step() {
       video.requestVideoFrameCallback(step);
   }
 
+  
 }
 
 const mobileDetect = () => {
