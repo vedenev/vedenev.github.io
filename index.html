@@ -11,6 +11,9 @@
 <script>
 
 let BIG_SIZE = 1920;
+let SMALL_SIZE = 384;
+
+let N_FRAMES_MAX = 50
 
 let N_FRAMES_FPS_COUNT = 5;
 
@@ -18,7 +21,7 @@ let N_FRAMES_FPS_COUNT = 5;
 let height = 0;
 let width = 0;
 
-let canvasOutput = document.getElementById("canvasOutput")
+//let canvasOutput = document.getElementById("canvasOutput")
 let video = document.getElementById("video");
 let streaming = false;
 let stream = null;
@@ -28,6 +31,8 @@ let timeForFPSCountOld = timeForFPSCount;
 let frameIndex = 0
 let FPS = 0.0
 let CountFPSIndex = 0
+
+let statusElement = document.getElementById('status');
 
 function step() {
   if (streaming) {
@@ -45,6 +50,7 @@ function step() {
           let timeDeltaSec = timeDelta / 1000;
           FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
           timeForFPSCountOld = timeForFPSCount;
+          statusElement.innerHTML = FPS.toString(10);
           CountFPSIndex++;
       }
       
@@ -52,7 +58,17 @@ function step() {
       frameIndex += 1;
   }
 
-  video.requestVideoFrameCallback(step);
+  //video.requestVideoFrameCallback(step);
+  
+  if (frameIndex < N_FRAMES_MAX) {
+      // Re-register the callback to be notified about the next frame
+      video.requestVideoFrameCallback(step);
+  } else if (frameIndex == N_FRAMES_MAX){
+      streaming = false;
+      set_resolution(BIG_SIZE);
+  } else {
+      video.requestVideoFrameCallback(step);
+  }
 
 }
 
@@ -64,17 +80,16 @@ const mobileDetect = () => {
   return check;
 };
 
-function startCamera() {
+function set_resolution(size) {
   if (streaming) return;
   is_mobile = mobileDetect();
   let camera_settings = null;
   let resolution = null;
   if(is_mobile) {
-      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, facingMode: "environment"};
+      resolution = {width: {ideal: size}, height: {ideal: size}, facingMode: "environment"};
       camera_settings = {video: resolution, audio: false};
-      
   } else {
-      resolution = {width: {ideal: BIG_SIZE}, height: {ideal: BIG_SIZE}, frameRate: { ideal: 20, max: 25 } };
+      resolution = {width: {ideal: size}, height: {ideal: size}, frameRate: { ideal: 20, max: 25 } };
       camera_settings = {video: resolution, audio: false};
       
   }
@@ -113,7 +128,7 @@ function startCamera() {
 
 
 const main = async () => {
-  startCamera();
+  set_resolution(SMALL_SIZE);
 }
 
 main();
