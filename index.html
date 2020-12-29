@@ -29,7 +29,32 @@ let frameIndex = 0
 let FPS = 0.0
 let CountFPSIndex = 0
 
+function step() {
+  if (streaming) {
+      let isCountFPS = frameIndex % N_FRAMES_FPS_COUNT == 0;
+      
+      if (isCountFPS) {
+          timeForFPSCount = performance.now();
+      }
+      
+      
+      
+      
+      if (isCountFPS) {
+          let timeDelta = timeForFPSCount - timeForFPSCountOld;
+          let timeDeltaSec = timeDelta / 1000;
+          FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
+          timeForFPSCountOld = timeForFPSCount;
+          CountFPSIndex++;
+      }
+      
+      
+      frameIndex += 1;
+  }
 
+  video.requestVideoFrameCallback(step);
+
+}
 
 const mobileDetect = () => {
   let check = false;
@@ -59,32 +84,7 @@ function startCamera() {
     stream = s;
     video.srcObject = s;
     video.play();
-    function step() {
-      if (streaming) {
-          let isCountFPS = frameIndex % N_FRAMES_FPS_COUNT == 0;
-          
-          if (isCountFPS) {
-              timeForFPSCount = performance.now();
-          }
-          
-          
-          
-          
-          if (isCountFPS) {
-              let timeDelta = timeForFPSCount - timeForFPSCountOld;
-              let timeDeltaSec = timeDelta / 1000;
-              FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
-              timeForFPSCountOld = timeForFPSCount;
-              CountFPSIndex++;
-          }
-          
-          
-          frameIndex += 1;
-      }
-
-      video.requestVideoFrameCallback(step);
-
-    }
+    
 
     video.requestVideoFrameCallback(step);
   })
