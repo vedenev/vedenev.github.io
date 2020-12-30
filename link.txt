@@ -1,2 +1,0 @@
-https://web.dev/requestvideoframecallback-rvfc/
-python3 -m http.server 8000
