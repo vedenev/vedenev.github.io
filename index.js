@@ -120,6 +120,7 @@ video.setAttribute("playsinline", true); // for iphone
 let FPSElement = document.getElementById("fps_display");
 let statusElement = document.getElementById("status");
 let photoStatusElement = document.getElementById("photo_status");
+let zoomStatusElement = document.getElementById("zoom_status");
 
 
 let canvas_display = document.getElementById("canvas_display");
@@ -1095,6 +1096,16 @@ function prepare_global_variables() {
     real_settings = stream.getVideoTracks()[0].getSettings();
     console.log(real_settings);
     
+    // https://googlechrome.github.io/samples/image-capture/update-camera-zoom.html
+    //let supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
+    //let is_zoom_supported = supportedConstraints.hasOwnProperty("zoom");
+    
+    if ('zoom' in real_settings) {
+        zoomStatusElement.innerHTML = "zoom: " + real_settings.zoom.toString(10);
+    } else {
+        zoomStatusElement.innerHTML = "zoom: " + "undefined";
+    }
+    
     width = real_settings.width;
     height = real_settings.height;
         
@@ -1156,6 +1167,8 @@ function prepare_global_variables() {
         pasport_height_estimation_display = width_display / PASSPORT_ASPECT_RATIO;
     }
     slow_motion_dist_threshold_per_sec = SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC * pasport_height_estimation_display;
+    
+    
     
     status(5);
     
