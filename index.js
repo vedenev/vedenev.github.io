@@ -49,6 +49,7 @@ let slow_motion_dist_threshold_per_sec = 0;
 
 let streaming = false;
 let real_settings = null;
+let capabilities = null;
 let stream = null;
 let height = 0;
 let width = 0;
@@ -1095,13 +1096,14 @@ function roundAdvancedWithMultiplier(inp, multiplier) {
 function prepare_global_variables() {
     real_settings = stream.getVideoTracks()[0].getSettings();
     console.log(real_settings);
+    capabilities = stream.getVideoTracks()[0].getCapabilities();
     
     // https://googlechrome.github.io/samples/image-capture/update-camera-zoom.html
     //let supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
     //let is_zoom_supported = supportedConstraints.hasOwnProperty("zoom");
     
     if ('zoom' in real_settings) {
-        zoomStatusElement.innerHTML = "zoom: " + real_settings.zoom.toString(10);
+        zoomStatusElement.innerHTML = "zoom:" + real_settings.zoom.toString(10) + " zoom min:" + capabilities.zoom.min.toString(10) + " zoom max:" + capabilities.zoom.max.toString(10) + " zoom step:" + capabilities.zoom.step.toString(10);
     } else {
         zoomStatusElement.innerHTML = "zoom: " + "undefined";
     }
