@@ -1187,10 +1187,10 @@ function start_camera() {
     is_mobile = mobileDetect();
     video_constraints = null;
     if (is_mobile) {
-        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "environment", resizeMode: "none"};
+        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "environment", resizeMode: "none", zoom: false};
         is_mirror = false;
     } else {
-        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none"};
+        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false};
         is_mirror = true;
     }
     camera_constraints = {video: video_constraints, audio: false};
