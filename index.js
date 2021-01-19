@@ -1108,6 +1108,31 @@ function prepare_global_variables() {
         zoomStatusElement.innerHTML = "zoom: " + "undefined";
     }
     
+    let zoom_str_append = "";
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      //console.log("enumerateDevices() not supported.");
+      zoom_str_append = zoom_str_append + "<br />" + "enumerateDevices() not supported.";
+    }
+    
+    // List cameras and microphones.
+    
+    navigator.mediaDevices.enumerateDevices()
+    .then(function(devices) {
+      devices.forEach(function(device) {
+        console.log(device.kind + ": " + device.label +
+                    " id = " + device.deviceId);
+        zoom_str_append = zoom_str_append + "<br />" + device.kind + ": " + device.label + " id = " + device.deviceId;
+      });
+      zoomStatusElement.innerHTML = zoomStatusElement.innerHTML + zoom_str_append;
+    })
+    .catch(function(err) {
+      console.log(err.name + ": " + err.message);
+    });
+    
+    console.log(zoom_str_append);
+    
+    
+    
     width = real_settings.width;
     height = real_settings.height;
         
