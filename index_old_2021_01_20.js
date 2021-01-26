@@ -1,8 +1,4 @@
-
-  
 const MODEL_PATH = './tf_model_t082_unfixed/model.json';
-
-let START_WITH_ENVIROMENT_CAMERA = true;
 
 let BIG_WIDTH = 4096;
 let BIG_HEIGHT = 2160;
@@ -161,28 +157,14 @@ let points_display_resize_factor_y = 0;
 
 let message_index_old = -1;
 
-
 let video = document.getElementById("video");
-function for_iphone() {
-    
-    
-    ////https://stackoverflow.com/questions/27051662/getusermedia-freezes-in-mobile-browsers
-    //video.setAttribute('autoplay', '');
-    //video.setAttribute('muted', '');
-    //video.setAttribute('playsinline', '');
-    
-    //video.autoplay = true;
-    //video.muted = true;
-    //video.playsinline = true;
-    
-    
-}
-for_iphone();
-video.play();
+video.setAttribute("playsinline", true); // for iphone
 
 let FPSElement = document.getElementById("fps_display");
 let statusElement = document.getElementById("status");
 let photoStatusElement = document.getElementById("photo_status");
+let zoomStatusElement = document.getElementById("zoom_status");
+
 
 let canvas_display = document.getElementById("canvas_display");
 let canvas_display_context = canvas_display.getContext("2d");
@@ -200,11 +182,9 @@ let FPS = 0.0
 let CountFPSIndex = 0
 let currentTimeOld = 0.0;
 
-let is_camera_selector = false;
-let cameras_labels = null;
-let cameras_ids = null;
 let is_default_constrains = false;
-let select = null;
+let is_many_cameras = false;
+let really_many_cameras = false;
 
 class PreallocatedArray {
     constructor(size) {
@@ -753,10 +733,6 @@ const status = message_index => {
             statusElement.innerHTML = 'не удалось запустить видеокамеру';
             break;
             
-            case 8:
-            statusElement.innerHTML = 'сфотографировано, см. результат внизу страницы';
-            break;
-            
         }
         message_index_old = message_index;
     }
@@ -1117,7 +1093,6 @@ function frame_processing() {
     }
     
     if (all_all_all_ok) {
-        status(8);
         let photo_display_reisize_factor = 0.2;
         let photo_display_width = roundSimple(width * photo_display_reisize_factor);
         let photo_display_height = roundSimple(height * photo_display_reisize_factor);
@@ -1148,10 +1123,9 @@ function step() {
               let timeDeltaSec = timeDelta / 1000;
               FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
               timeForFPSCountOld = timeForFPSCount;
-              FPSElement.innerHTML = "FPS: " + FPS.toString(10) + "  " +video.currentTime.toString(10);
+              FPSElement.innerHTML = "FPS: " + FPS.toString(10);
               CountFPSIndex++;
           }
-          
           
           frameIndex += 1;
       }
@@ -1170,25 +1144,49 @@ function roundAdvancedWithMultiplier(inp, multiplier) {
 }
 
 function prepare_global_variables() {
-    
     real_settings = stream.getVideoTracks()[0].getSettings();
+    console.log(real_settings);
+    capabilities = stream.getVideoTracks()[0].getCapabilities();
+    
+    // https://googlechrome.github.io/samples/image-capture/update-camera-zoom.html
+    //let supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
+    //let is_zoom_supported = supportedConstraints.hasOwnProperty("zoom");
+    
+    if ('zoom' in real_settings) {
+        zoomStatusElement.innerHTML = "zoom:" + real_settings.zoom.toString(10) + " zoom min:" + capabilities.zoom.min.toString(10) + " zoom max:" + capabilities.zoom.max.toString(10) + " zoom step:" + capabilities.zoom.step.toString(10);
+    } else {
+        zoomStatusElement.innerHTML = "zoom: " + "undefined";
+    }
+    
+    //let zoom_str_append = "";
+    //if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    //  //console.log("enumerateDevices() not supported.");
+    //  zoom_str_append = zoom_str_append + "<br />" + "enumerateDevices() not supported.";
+    //}
+    //
+    //// List cameras and microphones.
+    //
+    //navigator.mediaDevices.enumerateDevices()
+    //.then(function(devices) {
+    //  devices.forEach(function(device) {
+    //    if (device.kind === 'videoinput') {
+    //        console.log(device.label +
+    //                    " id = " + device.deviceId);
+    //        zoom_str_append = zoom_str_append + "<br />" + device.label;
+    //    }
+    //  });
+    //  zoomStatusElement.innerHTML = zoomStatusElement.innerHTML + zoom_str_append;
+    //})
+    //.catch(function(err) {
+    //  console.log(err.name + ": " + err.message);
+    //});
+    //
+    //console.log(zoom_str_append);
+    
+    
+    
     width = real_settings.width;
     height = real_settings.height;
-    //console.log(real_settings);
-    
-    if (real_settings.hasOwnProperty("facingMode")) {
-        if (real_settings.facingMode == "user") {
-            is_mirror = true;
-        } else {
-            is_mirror = false;
-        }
-    } else {
-        if (is_mobile) {
-            is_mirror = false;
-        } else {
-            is_mirror = true;
-        }
-    }
         
     let width_display_request = window.innerWidth * WIDTH_DISPLAY_RELATIVE_MAX;
     let height_display_request = window.innerHeight * HEIGHT_DISPLAY_RELATIVE_MAX;
@@ -1197,16 +1195,9 @@ function prepare_global_variables() {
     height_display = roundSimple(resize_factor_display * height);
     canvas_display.width = width_display;
     canvas_display.height = height_display;
-    
     if (is_mirror) {
-        canvas_display.style = "-webkit-transform:scaleX(-1);transform: scaleX(-1)";
-    } else {
-        //canvas_display.style = "transform: scaleX(1)";
-        canvas_display.style = "";
+        canvas_display.style = "transform: scaleX(-1)";
     }
-    
-    
-    
     
     //statusElement.innerHTML = "height = " + height.toString(10) + "  " + "width = " + width.toString(10) + "  " + "height_display = " + height_display.toString(10) + "  " + "width_display = " + width_display.toString(10) + " " + "resize_factor_display =" + resize_factor_display.toString(10);
     
@@ -1270,275 +1261,132 @@ const mobileDetect = () => {
     return check;
 };
 
-function select_change(event) {
+function start_camera() {
+    if (streaming) return;
+    is_mobile = mobileDetect();
     
-    streaming = false;
+    if (is_mobile) {
+        is_mirror = false;
+    } else {
+        is_mirror = true;
+    }
     
-    stream.getVideoTracks().forEach(function(track) {
-        track.stop();
-    });
-    //video.srcObject = null;
-    //stream = null;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        console.log("enumerateDevices() not supported.");
+        is_default_constrains = true;
+    } else {
+        cameras_labels = [];
+        cameras_ids = [];
+        navigator.mediaDevices.enumerateDevices()
+        .then(function(devices) {
+            devices.forEach(function(device) {
+            if (device.kind === 'videoinput') {
+                cameras_labels.push(device.label);
+                cameras_ids.deviceId(device.deviceId);
+            }
+          });
+        })
+        .catch(function(err) {
+            console.log(err.name + ": " + err.message);
+        });
+        
+        
+        
+        if (cameras_labels.length <= 1) {
+            is_default_constrains = true;
+        } else {
+            if (is_mobile) {
+                // to do: select back cameras, sort by MP if possible or invert list and choose first:
+                let cameras_labels_new = [];
+                let cameras_ids_new = [];
+                let cameras_mp_values_new = [];
+                let is_all_mp_values = true;
+                for (let label_index = 0; label_index < cameras_labels.length; label_index++) {
+                    let label_tmp = cameras_labels[label_index].toLowerCase();
+                    let is_back = false;
+                    for (let keyword_index = 0; keyword_index < BACK_CAMERA_KEYWORS.length; keyword_index++) {
+                        if (label_tmp.includes(BACK_CAMERA_KEYWORS[keyword_index])) {
+                            is_back = true;
+                            break;
+                        }
+                    }
+                    if (is_back) {
+                        cameras_labels_new.push(cameras_labels[label_index]);
+                        cameras_ids_new.push(cameras_ids[label_index]);
+                        let match = cameras_labels[label_index].match(/\b([0-9]+)\s?MP?\b/i);
+                        if (match == null) {
+                            is_all_mp_values = false;
+                        } else {
+                            cameras_mp_values_new.push(parseInt(match[1], 10));
+                        }
+                    }
+                }
+                if (cameras_labels_new.length != 0) {
+                    cameras_labels = cameras_labels_new;
+                    cameras_ids = cameras_ids_new;
+                    if (is_all_mp_values) {
+                        
+                    } else {
+                        cameras_labels = cameras_labels.reverse();
+                        cameras_ids = cameras_ids.reverse();
+                    }
+                }
+                
+                    
+            }
+            // here must be: cameras_labels.length = cameras_ids.length >= 1
+            is_many_cameras = true;
+        }
+        
+    }
     
-    video.pause();
+    if (is_default_constrains) {
+        if (is_mobile) {
+            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "environment", resizeMode: "none", zoom: false};
+        } else {
+            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false};
+        }
+    }
     
+    if (is_many_cameras) {
+        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "environment", resizeMode: "none", zoom: false, deviceId: { exact: cameras_ids[0]}};
+        if (cameras_labels.length > 1) {
+            really_many_cameras = true;
+        }
+    }
     
+    if (really_many_cameras) {
+        // to do: add camera selector to the page and organize the callback
+        
+    }
 
-    let label_index = event.target.value;
-    
-    
-    let camera_id = cameras_ids[label_index];
-    
-    
-    video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: camera_id}};
-    
-    //if (label_index == 0) {
-    //    video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, facingMode: "environment"};
-    //} else {
-    //    video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, facingMode: "user"};
+    //  zoom_str_append = zoom_str_append + "<br />" + "enumerateDevices() not supported.";
     //}
+    //
+    //// List cameras and microphones.
+    //
+    //navigator.mediaDevices.enumerateDevices()
+    //.then(function(devices) {
+    //  devices.forEach(function(device) {
+    //    if (device.kind === 'videoinput') {
+    //        console.log(device.label +
+    //                    " id = " + device.deviceId);
+    //        zoom_str_append = zoom_str_append + "<br />" + device.label;
+    //    }
+    //  });
+    //  zoomStatusElement.innerHTML = zoomStatusElement.innerHTML + zoom_str_append;
+    //})
+    //.catch(function(err) {
+    //  console.log(err.name + ": " + err.message);
+    //});
+        
     
+    video_constraints = null;
     camera_constraints = {video: video_constraints, audio: false};
     
     navigator.mediaDevices.getUserMedia(camera_constraints)
         .then(function(s) {
             stream = s;
-            for_iphone();
-            video.srcObject = s;
-            video.play();
-            //requestAnimationFrame(step);
-        })
-        .catch(function(err) {
-            console.log("An error occured! " + err);
-            status(7);
-        });
-    
-}
-
-function start_camera_rest_code() {
-    
-    is_camera_selector = false;
-    
-    real_settings = stream.getVideoTracks()[0].getSettings();
-    let already_run_divice_id = null;
-    if (real_settings.hasOwnProperty("deviceId")) {
-        already_run_divice_id = real_settings.deviceId;
-    }
-    
-    if (cameras_labels.length <= 1 || already_run_divice_id == null) {
-        is_camera_selector = false;
-    } else {
-        is_camera_selector = true;
-    }
-    
-
-    console.log("already_run_divice_id = " + already_run_divice_id.toString())
-    console.log("cameras_labels.length = " + cameras_labels.length.toString(10));
-    console.log("is_camera_selector = " + is_camera_selector.toString());
-    
-    if (is_camera_selector) {
-        if (is_mobile) {
-            // define back cameras, sort by MP if possible or invert list:
-            let cameras_is_back = [];
-            let cameras_mp_values = [];
-            let cameras_has_mp_values = [];
-            let is_all_mp_values = true;
-            for (let label_index = 0; label_index < cameras_labels.length; label_index++) {
-                let label_tmp = cameras_labels[label_index].toLowerCase();
-                let is_back = false;
-                for (let keyword_index = 0; keyword_index < BACK_CAMERA_KEYWORS.length; keyword_index++) {
-                    if (label_tmp.includes(BACK_CAMERA_KEYWORS[keyword_index])) {
-                        is_back = true;
-                        break;
-                    }
-                }
-                cameras_is_back.push(is_back);
-                let match = cameras_labels[label_index].match(/\b([0-9]+)\s?MP?\b/i);
-                if (match == null) {
-                    is_all_mp_values = false;
-                    cameras_mp_values.push(0);
-                    cameras_has_mp_values.push(false);
-                } else {
-                    cameras_mp_values.push(parseInt(match[1], 10));
-                    cameras_has_mp_values.push(true);
-                }
-            }
-            
-            
-            //let cameras_labels_back = [];
-            //let cameras_ids_back = [];
-            //let cameras_mp_values_back = [];
-            //let is_all_mp_values_back = true;
-            //
-            //let cameras_labels_front = [];
-            //let cameras_ids_front = [];
-            //let cameras_mp_values_front = [];
-            //let is_all_mp_values_front = true;
-            
-            let cameras_labels_grouped = [[], []];
-            let cameras_ids_grouped = [[], []];
-            let cameras_mp_values_grouped = [[], []];
-            let is_all_mp_values_grouped = [true, true];
-            
-            for (let label_index = 0; label_index < cameras_labels.length; label_index++) {
-                let camera_label = cameras_labels[label_index];
-                let camera_id = cameras_ids[label_index];
-                let camera_mp_value = cameras_mp_values[label_index];
-                let is_back = cameras_is_back[label_index];
-                let has_mp_value = cameras_has_mp_values[label_index];
-                let back_front_index = 0;
-                if (is_back) {
-                    back_front_index = 0;
-                } else {
-                    back_front_index = 1;
-                }
-                
-                cameras_labels_grouped[back_front_index].push(camera_label);
-                cameras_ids_grouped[back_front_index].push(camera_id);
-                cameras_mp_values_grouped[back_front_index].push(camera_mp_value);
-                if (!has_mp_value) {
-                    is_all_mp_values_grouped[back_front_index] = false;
-                }
-                
-            }
-            
-            cameras_labels = [];
-            cameras_ids = [];
-            for (let back_front_index = 0; back_front_index < 2; back_front_index++) {
-                if (is_all_mp_values_grouped[back_front_index]) {
-                    var indices = new Array(cameras_labels_grouped[back_front_index].length);
-                    for (var i = 0; i < indices.length; ++i) indices[i] = i;
-                    let values = cameras_mp_values_grouped[back_front_index];
-                    indices.sort(function (a, b) { return values[a] < values[b] ? 1 : values[a] > values[b] ? -1 : 0; });
-                    cameras_labels_tmp_new = [];
-                    cameras_ids_tmp_new = [];
-                    for (let index_0 = 0; index_0 < indices.length; index_0++) {
-                        let index = indices[index_0];
-                        cameras_labels_tmp_new.push(cameras_labels_grouped[back_front_index][index]);
-                        cameras_ids_tmp_new.push(cameras_ids_grouped[back_front_index][index]);
-                    }
-                    cameras_labels_grouped[back_front_index] = cameras_labels_tmp_new;
-                    cameras_ids_grouped[back_front_index] = cameras_ids_tmp_new;
-                } else {
-                    cameras_labels_grouped[back_front_index] = cameras_labels_grouped[back_front_index].reverse();
-                    cameras_ids_grouped[back_front_index] = cameras_ids_grouped[back_front_index].reverse();
-                }
-                for (let label_index = 0; label_index < cameras_labels_grouped[back_front_index].length; label_index++) {
-                    cameras_labels.push(cameras_labels_grouped[back_front_index][label_index]);
-                    cameras_ids.push(cameras_ids_grouped[back_front_index][label_index]);
-                }
-            }
-                    
-            
-            
-            
-            
-            //if (is_all_mp_values) {
-            //            
-            //} else {
-            //    cameras_labels = cameras_labels.reverse();
-            //    cameras_ids = cameras_ids.reverse();
-            //}
-            
-            if (!START_WITH_ENVIROMENT_CAMERA) {
-                cameras_labels = cameras_labels.reverse();
-                cameras_ids = cameras_ids.reverse();
-            }
-            
-        }
-        
-        
-        //video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: cameras_ids[0]}};
-        
-        // https://jsfiddle.net/techiedelight/hw91zuxq/
-        select = document.createElement("select");
-        //select.width = "30%";
-        select.style.width = "50%";
-        if (is_mobile) {
-            select.style = "font-size: 350%";
-        } else {
-            select.style = "font-size: 150%";
-        }
-        select.name = "cameras_select";
-        select.id = "cameras_select";
-        
-        //console.log(cameras_labels);
-        for (let label_index = 0; label_index < cameras_labels.length; label_index++) {
-            let val = cameras_labels[label_index];
-            var option = document.createElement("option");
-            option.value = label_index;
-            option.text = val;
-            select.appendChild(option);
-        }
-        select.onchange = select_change;
-        
-        
-        
-        var label_for_select = document.createElement("label");
-        label_for_select.innerHTML = "Выберите камеру: "
-        label_for_select.htmlFor = "cameras_select";
-        
-        var div_for_select = document.createElement("div");
-        document.body.insertBefore(div_for_select, FPSElement);
-        div_for_select.appendChild(label_for_select).appendChild(select);
-        
-        if (already_run_divice_id != cameras_ids[0]) {
-            console.log("already_run_divice_id != cameras_ids[0]")
-            streaming = false;
-            stream.getVideoTracks().forEach(function(track) {
-                track.stop();
-            });
-            video.srcObject = null;
-
-            let camera_id = cameras_ids[0];
-            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: camera_id}};
-            
-            camera_constraints = {video: video_constraints, audio: false};
-            
-            navigator.mediaDevices.getUserMedia(camera_constraints)
-                .then(function(s) {
-                    stream = s;
-                    for_iphone();
-                    video.srcObject = s;
-                    video.play();
-                    //requestAnimationFrame(step);
-                })
-                .catch(function(err) {
-                    console.log("An error occured! " + err);
-                    status(7);
-                });
-        }
-
-    }
-    
-
-
-
-    
-}
-
-function start_camera() {
-    if (streaming) return;
-    is_mobile = mobileDetect();
-    
-    // start with default constrains, to get permision, to run enumerateDevices
-    
-    if (is_mobile) {
-        if (START_WITH_ENVIROMENT_CAMERA) {
-            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "environment", resizeMode: "none", zoom: false};
-        } else {
-            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "user", resizeMode: "none", zoom: false};
-        }
-    } else {
-        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false};
-    }
-    
-    camera_constraints = {video: video_constraints, audio: false};
-    
-    var getusermedia_promise = navigator.mediaDevices.getUserMedia(camera_constraints)
-        .then(function(s) {
-            stream = s;
-            for_iphone();
             video.srcObject = s;
             video.play();
             requestAnimationFrame(step);
@@ -1548,59 +1396,8 @@ function start_camera() {
             status(7);
         });
     
-    if (getusermedia_promise == null) {
-        console.log("getusermedia_promise == null");
-        status(7);
-    } else {
-        getusermedia_promise.then(function(s) {
-            is_default_constrains = false;
-            cameras_labels = [];
-            cameras_ids = [];
-            
-            let devices_enumerated_promise = null;
-            
-            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                console.log("enumerateDevices() not supported.");
-            } else {
-                // https://stackoverflow.com/questions/36453838/assign-the-value-of-mediadevices-enumeratedevices-into-global-variable-in-java
-                devices_enumerated_promise = navigator.mediaDevices.enumerateDevices()
-                .then(function(devices) {
-                    devices.forEach(function(device) {
-                    if (device.kind === 'videoinput' && device.label.length > 0) {
-                        console.log(device);
-                        cameras_labels.push(device.label);
-                        cameras_ids.push(device.deviceId);
-                    }
-                  });
-                  
-                  //console.log(cameras_labels)
-                  
-                })
-                .catch(function(err) {
-                    console.log(err.name + ": " + err.message);
-                });
-            }
-            
-            if (devices_enumerated_promise == null) {
-                console.log("devices_enumerated_promise == null");
-                start_camera_rest_code();
-            } else {
-                console.log("devices_enumerated_promise != null");
-                devices_enumerated_promise.then(function(devices) {
-                    console.log("the promise started");
-                    start_camera_rest_code();
-                });
-            }
-            
-        });
-    
-    }
-    
-    
-    
     video.addEventListener("canplay", function(ev){
         if (!streaming) {
-            console.log('canplay');
             prepare_global_variables();
             streaming = true;
         }
@@ -1613,21 +1410,6 @@ const main = async () => {
     start_camera();
 }
 
-(function () {
-    var old = console.log;
-    var logger = document.getElementById('log');
-    console.log = function (message) {
-        if (typeof message == 'object') {
-            logger.innerHTML += (JSON && JSON.stringify ? JSON.stringify(message) : message) + '<br />';
-        } else {
-            logger.innerHTML += message + '<br />';
-        }
-    }
-})();
+main();
 
-window.onerror = function(e){
-    console.log(e.toString());
-}
 
-//main();
- window.onload = main;

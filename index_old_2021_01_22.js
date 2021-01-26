@@ -1,8 +1,4 @@
-
-  
 const MODEL_PATH = './tf_model_t082_unfixed/model.json';
-
-let START_WITH_ENVIROMENT_CAMERA = true;
 
 let BIG_WIDTH = 4096;
 let BIG_HEIGHT = 2160;
@@ -161,24 +157,8 @@ let points_display_resize_factor_y = 0;
 
 let message_index_old = -1;
 
-
 let video = document.getElementById("video");
-function for_iphone() {
-    
-    
-    ////https://stackoverflow.com/questions/27051662/getusermedia-freezes-in-mobile-browsers
-    //video.setAttribute('autoplay', '');
-    //video.setAttribute('muted', '');
-    //video.setAttribute('playsinline', '');
-    
-    //video.autoplay = true;
-    //video.muted = true;
-    //video.playsinline = true;
-    
-    
-}
-for_iphone();
-video.play();
+video.setAttribute("playsinline", true); // for iphone
 
 let FPSElement = document.getElementById("fps_display");
 let statusElement = document.getElementById("status");
@@ -753,10 +733,6 @@ const status = message_index => {
             statusElement.innerHTML = 'не удалось запустить видеокамеру';
             break;
             
-            case 8:
-            statusElement.innerHTML = 'сфотографировано, см. результат внизу страницы';
-            break;
-            
         }
         message_index_old = message_index;
     }
@@ -1117,7 +1093,6 @@ function frame_processing() {
     }
     
     if (all_all_all_ok) {
-        status(8);
         let photo_display_reisize_factor = 0.2;
         let photo_display_width = roundSimple(width * photo_display_reisize_factor);
         let photo_display_height = roundSimple(height * photo_display_reisize_factor);
@@ -1148,10 +1123,9 @@ function step() {
               let timeDeltaSec = timeDelta / 1000;
               FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
               timeForFPSCountOld = timeForFPSCount;
-              FPSElement.innerHTML = "FPS: " + FPS.toString(10) + "  " +video.currentTime.toString(10);
+              FPSElement.innerHTML = "FPS: " + FPS.toString(10);
               CountFPSIndex++;
           }
-          
           
           frameIndex += 1;
       }
@@ -1175,7 +1149,6 @@ function prepare_global_variables() {
     width = real_settings.width;
     height = real_settings.height;
     //console.log(real_settings);
-    
     if (real_settings.hasOwnProperty("facingMode")) {
         if (real_settings.facingMode == "user") {
             is_mirror = true;
@@ -1197,15 +1170,11 @@ function prepare_global_variables() {
     height_display = roundSimple(resize_factor_display * height);
     canvas_display.width = width_display;
     canvas_display.height = height_display;
-    
     if (is_mirror) {
-        canvas_display.style = "-webkit-transform:scaleX(-1);transform: scaleX(-1)";
+        canvas_display.style = "transform: scaleX(-1)";
     } else {
-        //canvas_display.style = "transform: scaleX(1)";
-        canvas_display.style = "";
+        canvas_display.style = "transform: scaleX(1)";
     }
-    
-    
     
     
     //statusElement.innerHTML = "height = " + height.toString(10) + "  " + "width = " + width.toString(10) + "  " + "height_display = " + height_display.toString(10) + "  " + "width_display = " + width_display.toString(10) + " " + "resize_factor_display =" + resize_factor_display.toString(10);
@@ -1273,37 +1242,22 @@ const mobileDetect = () => {
 function select_change(event) {
     
     streaming = false;
-    
     stream.getVideoTracks().forEach(function(track) {
         track.stop();
     });
-    //video.srcObject = null;
-    //stream = null;
-    
-    video.pause();
-    
+    video.srcObject = null;
     
 
     let label_index = event.target.value;
     
-    
     let camera_id = cameras_ids[label_index];
-    
-    
     video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: camera_id}};
-    
-    //if (label_index == 0) {
-    //    video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, facingMode: "environment"};
-    //} else {
-    //    video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, facingMode: "user"};
-    //}
     
     camera_constraints = {video: video_constraints, audio: false};
     
     navigator.mediaDevices.getUserMedia(camera_constraints)
         .then(function(s) {
             stream = s;
-            for_iphone();
             video.srcObject = s;
             video.play();
             //requestAnimationFrame(step);
@@ -1316,25 +1270,24 @@ function select_change(event) {
 }
 
 function start_camera_rest_code() {
-    
-    is_camera_selector = false;
-    
-    real_settings = stream.getVideoTracks()[0].getSettings();
-    let already_run_divice_id = null;
-    if (real_settings.hasOwnProperty("deviceId")) {
-        already_run_divice_id = real_settings.deviceId;
+    //console.log("in start_camera_rest_code:");
+    //console.log(cameras_labels);
+    if (cameras_labels.length <= 1) {
+        is_default_constrains = true;
     }
     
-    if (cameras_labels.length <= 1 || already_run_divice_id == null) {
+    if (is_default_constrains) {
         is_camera_selector = false;
+        if (is_mobile) {
+            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "environment", resizeMode: "none", zoom: false};
+        } else {
+            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false};
+        }
     } else {
         is_camera_selector = true;
     }
     
-
-    console.log("already_run_divice_id = " + already_run_divice_id.toString())
-    console.log("cameras_labels.length = " + cameras_labels.length.toString(10));
-    console.log("is_camera_selector = " + is_camera_selector.toString());
+    
     
     if (is_camera_selector) {
         if (is_mobile) {
@@ -1440,25 +1393,12 @@ function start_camera_rest_code() {
             //    cameras_ids = cameras_ids.reverse();
             //}
             
-            if (!START_WITH_ENVIROMENT_CAMERA) {
-                cameras_labels = cameras_labels.reverse();
-                cameras_ids = cameras_ids.reverse();
-            }
-            
         }
         
-        
-        //video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: cameras_ids[0]}};
+        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: cameras_ids[0]}};
         
         // https://jsfiddle.net/techiedelight/hw91zuxq/
         select = document.createElement("select");
-        //select.width = "30%";
-        select.style.width = "50%";
-        if (is_mobile) {
-            select.style = "font-size: 350%";
-        } else {
-            select.style = "font-size: 150%";
-        }
         select.name = "cameras_select";
         select.id = "cameras_select";
         
@@ -1472,8 +1412,6 @@ function start_camera_rest_code() {
         }
         select.onchange = select_change;
         
-        
-        
         var label_for_select = document.createElement("label");
         label_for_select.innerHTML = "Выберите камеру: "
         label_for_select.htmlFor = "cameras_select";
@@ -1482,63 +1420,16 @@ function start_camera_rest_code() {
         document.body.insertBefore(div_for_select, FPSElement);
         div_for_select.appendChild(label_for_select).appendChild(select);
         
-        if (already_run_divice_id != cameras_ids[0]) {
-            console.log("already_run_divice_id != cameras_ids[0]")
-            streaming = false;
-            stream.getVideoTracks().forEach(function(track) {
-                track.stop();
-            });
-            video.srcObject = null;
-
-            let camera_id = cameras_ids[0];
-            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: camera_id}};
-            
-            camera_constraints = {video: video_constraints, audio: false};
-            
-            navigator.mediaDevices.getUserMedia(camera_constraints)
-                .then(function(s) {
-                    stream = s;
-                    for_iphone();
-                    video.srcObject = s;
-                    video.play();
-                    //requestAnimationFrame(step);
-                })
-                .catch(function(err) {
-                    console.log("An error occured! " + err);
-                    status(7);
-                });
-        }
 
     }
     
 
 
-
-    
-}
-
-function start_camera() {
-    if (streaming) return;
-    is_mobile = mobileDetect();
-    
-    // start with default constrains, to get permision, to run enumerateDevices
-    
-    if (is_mobile) {
-        if (START_WITH_ENVIROMENT_CAMERA) {
-            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "environment", resizeMode: "none", zoom: false};
-        } else {
-            video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, facingMode: "user", resizeMode: "none", zoom: false};
-        }
-    } else {
-        video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false};
-    }
-    
     camera_constraints = {video: video_constraints, audio: false};
     
-    var getusermedia_promise = navigator.mediaDevices.getUserMedia(camera_constraints)
+    navigator.mediaDevices.getUserMedia(camera_constraints)
         .then(function(s) {
             stream = s;
-            for_iphone();
             video.srcObject = s;
             video.play();
             requestAnimationFrame(step);
@@ -1547,56 +1438,50 @@ function start_camera() {
             console.log("An error occured! " + err);
             status(7);
         });
+}
+
+function start_camera() {
+    if (streaming) return;
+    is_mobile = mobileDetect();
     
-    if (getusermedia_promise == null) {
-        console.log("getusermedia_promise == null");
-        status(7);
+    is_default_constrains = false;
+    cameras_labels = [];
+    cameras_ids = [];
+    
+    let devices_enumerated_promise = null;
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        console.log("enumerateDevices() not supported.");
     } else {
-        getusermedia_promise.then(function(s) {
-            is_default_constrains = false;
-            cameras_labels = [];
-            cameras_ids = [];
-            
-            let devices_enumerated_promise = null;
-            
-            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                console.log("enumerateDevices() not supported.");
-            } else {
-                // https://stackoverflow.com/questions/36453838/assign-the-value-of-mediadevices-enumeratedevices-into-global-variable-in-java
-                devices_enumerated_promise = navigator.mediaDevices.enumerateDevices()
-                .then(function(devices) {
-                    devices.forEach(function(device) {
-                    if (device.kind === 'videoinput' && device.label.length > 0) {
-                        console.log(device);
-                        cameras_labels.push(device.label);
-                        cameras_ids.push(device.deviceId);
-                    }
-                  });
-                  
-                  //console.log(cameras_labels)
-                  
-                })
-                .catch(function(err) {
-                    console.log(err.name + ": " + err.message);
-                });
+        // https://stackoverflow.com/questions/36453838/assign-the-value-of-mediadevices-enumeratedevices-into-global-variable-in-java
+        devices_enumerated_promise = navigator.mediaDevices.enumerateDevices()
+        .then(function(devices) {
+            devices.forEach(function(device) {
+            if (device.kind === 'videoinput') {
+                console.log(device);
+                cameras_labels.push(device.label);
+                cameras_ids.push(device.deviceId);
             }
-            
-            if (devices_enumerated_promise == null) {
-                console.log("devices_enumerated_promise == null");
-                start_camera_rest_code();
-            } else {
-                console.log("devices_enumerated_promise != null");
-                devices_enumerated_promise.then(function(devices) {
-                    console.log("the promise started");
-                    start_camera_rest_code();
-                });
-            }
-            
+          });
+          
+          //console.log(cameras_labels)
+          
+        })
+        .catch(function(err) {
+            console.log(err.name + ": " + err.message);
         });
-    
     }
     
-    
+    if (devices_enumerated_promise == null) {
+        console.log("devices_enumerated_promise == null");
+        start_camera_rest_code();
+    } else {
+        console.log("devices_enumerated_promise != null");
+        devices_enumerated_promise.then(function(devices) {
+            console.log("the promise started");
+            start_camera_rest_code();
+        });
+    }
     
     video.addEventListener("canplay", function(ev){
         if (!streaming) {
@@ -1625,9 +1510,6 @@ const main = async () => {
     }
 })();
 
-window.onerror = function(e){
-    console.log(e.toString());
-}
+main();
 
-//main();
- window.onload = main;
+
