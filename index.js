@@ -1488,7 +1488,9 @@ function start_camera_rest_code() {
             stream.getVideoTracks().forEach(function(track) {
                 track.stop();
             });
-            video.srcObject = null;
+            //video.srcObject = null;
+            video.pause();
+            
 
             let camera_id = cameras_ids[0];
             video_constraints = {width: {ideal: BIG_WIDTH}, height: {ideal: BIG_HEIGHT}, resizeMode: "none", zoom: false, deviceId: { exact: camera_id}};

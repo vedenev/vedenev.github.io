@@ -1,0 +1,6 @@
+Замерил скорость нового детектора паспорта:
+1) Компьютер, AMD Ryzen 7 3800 + GPU: 28 FPS (GPU enabled), загрузка 5 сек
+2) Ноутбук, Intel i5-3210M: 15 FPS, загрузка 16 сек
+3) Anroid Xiaomi Redmi Note 5:  FPS, загрузка  сек
+4) Iphone 6S:  FPS, загрузка  сек
+5) Iphone SE:  FPS, загрузка  сек
