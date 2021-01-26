@@ -94,6 +94,7 @@ let BACK_CAMERA_KEYWORS = [
 
 
 let streaming = false;
+let requestAnimationFrameId = null;
 let real_settings = null;
 let capabilities = null;
 let stream = null;
@@ -1158,7 +1159,7 @@ function step() {
       currentTimeOld = video.currentTime;
   }
   
-  requestAnimationFrame(step);
+  requestAnimationFrameId = requestAnimationFrame(step);
 }
 
 function roundSimple(inp) {
@@ -1272,6 +1273,8 @@ const mobileDetect = () => {
 
 function select_change(event) {
     
+    cancelAnimationFrame(requestAnimationFrameId);
+    
     streaming = false;
     
     stream.getVideoTracks().forEach(function(track) {
@@ -1306,7 +1309,7 @@ function select_change(event) {
             for_iphone();
             video.srcObject = s;
             video.play();
-            //requestAnimationFrame(step);
+            requestAnimationFrameId = requestAnimationFrame(step);
         })
         .catch(function(err) {
             console.log("An error occured! " + err);
@@ -1331,6 +1334,8 @@ function start_camera_rest_code() {
         is_camera_selector = true;
     }
     
+    //// for debug:
+    //already_run_divice_id = "not_exist_id";
 
     console.log("already_run_divice_id = " + already_run_divice_id.toString())
     console.log("cameras_labels.length = " + cameras_labels.length.toString(10));
@@ -1503,7 +1508,7 @@ function start_camera_rest_code() {
                     for_iphone();
                     video.srcObject = s;
                     video.play();
-                    //requestAnimationFrame(step);
+                    //requestAnimationFrameId = requestAnimationFrame(step);
                 })
                 .catch(function(err) {
                     console.log("An error occured! " + err);
@@ -1543,7 +1548,7 @@ function start_camera() {
             for_iphone();
             video.srcObject = s;
             video.play();
-            requestAnimationFrame(step);
+            requestAnimationFrameId = requestAnimationFrame(step);
         })
         .catch(function(err) {
             console.log("An error occured! " + err);
