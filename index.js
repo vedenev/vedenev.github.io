@@ -164,6 +164,7 @@ let message_index_old = -1;
 
 
 let video = document.getElementById("video");
+video_play_promise = undefined;
 function for_iphone() {
     
     
@@ -179,7 +180,8 @@ function for_iphone() {
     
 }
 for_iphone();
-video.play();
+//video_play_promise = video.play();
+
 
 let FPSElement = document.getElementById("fps_display");
 let statusElement = document.getElementById("status");
@@ -1130,36 +1132,39 @@ function frame_processing() {
     
 }
 
+step_first_run = true;
 function step() {
-  if (streaming) {
-      
-      if (currentTimeOld != video.currentTime) {
+    if (step_first_run) {
+        console.log('step first run');
+        step_first_run = false;
+    }
+    if (streaming) {
+        if (currentTimeOld != video.currentTime) {
+            if (video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2) {
+                let isCountFPS = frameIndex % N_FRAMES_FPS_COUNT == 0;
+              
+                if (isCountFPS) {
+                    timeForFPSCount = performance.now();
+                }
+                frame_processing();
+              
+                if (isCountFPS) {
+                    let timeDelta = timeForFPSCount - timeForFPSCountOld;
+                    let timeDeltaSec = timeDelta / 1000;
+                    FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
+                    timeForFPSCountOld = timeForFPSCount;
+                    FPSElement.innerHTML = "FPS: " + FPS.toString(10) + "  " +video.currentTime.toString(10);
+                    CountFPSIndex++;
+                }
+              
+              
+                frameIndex += 1;
+            }
+        }
+        currentTimeOld = video.currentTime;
+    }
   
-          let isCountFPS = frameIndex % N_FRAMES_FPS_COUNT == 0;
-          
-          if (isCountFPS) {
-              timeForFPSCount = performance.now();
-          }
-          
-          
-          frame_processing();
-          
-          if (isCountFPS) {
-              let timeDelta = timeForFPSCount - timeForFPSCountOld;
-              let timeDeltaSec = timeDelta / 1000;
-              FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
-              timeForFPSCountOld = timeForFPSCount;
-              FPSElement.innerHTML = "FPS: " + FPS.toString(10) + "  " +video.currentTime.toString(10);
-              CountFPSIndex++;
-          }
-          
-          
-          frameIndex += 1;
-      }
-      currentTimeOld = video.currentTime;
-  }
-  
-  requestAnimationFrameId = requestAnimationFrame(step);
+    requestAnimationFrameId = requestAnimationFrame(step);
 }
 
 function roundSimple(inp) {
@@ -1173,9 +1178,15 @@ function roundAdvancedWithMultiplier(inp, multiplier) {
 function prepare_global_variables() {
     
     real_settings = stream.getVideoTracks()[0].getSettings();
-    width = real_settings.width;
-    height = real_settings.height;
+    //width = real_settings.width;
+    //height = real_settings.height;
     //console.log(real_settings);
+    width = video.videoWidth;
+    height = video.videoHeight;
+    console.log(width);
+    console.log(height);
+    video.setAttribute("width", width);
+    video.setAttribute("height", height);
     
     if (real_settings.hasOwnProperty("facingMode")) {
         if (real_settings.facingMode == "user") {
@@ -1308,8 +1319,8 @@ function select_change(event) {
             stream = s;
             for_iphone();
             video.srcObject = s;
-            video.play();
-            requestAnimationFrameId = requestAnimationFrame(step);
+            video_play_promise = video.play();
+            //requestAnimationFrameId = requestAnimationFrame(step);
         })
         .catch(function(err) {
             console.log("An error occured! " + err);
@@ -1334,8 +1345,8 @@ function start_camera_rest_code() {
         is_camera_selector = true;
     }
     
-    //// for debug:
-    //already_run_divice_id = "not_exist_id";
+    // for debug:
+    already_run_divice_id = "not_exist_id";
 
     console.log("already_run_divice_id = " + already_run_divice_id.toString())
     console.log("cameras_labels.length = " + cameras_labels.length.toString(10));
@@ -1488,8 +1499,9 @@ function start_camera_rest_code() {
         div_for_select.appendChild(label_for_select).appendChild(select);
         
         if (already_run_divice_id != cameras_ids[0]) {
-            console.log("already_run_divice_id != cameras_ids[0]")
             streaming = false;
+            cancelAnimationFrame(requestAnimationFrameId);
+            console.log("already_run_divice_id != cameras_ids[0]")
             stream.getVideoTracks().forEach(function(track) {
                 track.stop();
             });
@@ -1507,7 +1519,7 @@ function start_camera_rest_code() {
                     stream = s;
                     for_iphone();
                     video.srcObject = s;
-                    video.play();
+                    video_play_promise = video.play();
                     //requestAnimationFrameId = requestAnimationFrame(step);
                 })
                 .catch(function(err) {
@@ -1547,8 +1559,8 @@ function start_camera() {
             stream = s;
             for_iphone();
             video.srcObject = s;
-            video.play();
-            requestAnimationFrameId = requestAnimationFrame(step);
+            video_play_promise = video.play();
+            //requestAnimationFrameId = requestAnimationFrame(step);
         })
         .catch(function(err) {
             console.log("An error occured! " + err);
@@ -1607,9 +1619,20 @@ function start_camera() {
     
     video.addEventListener("canplay", function(ev){
         if (!streaming) {
-            console.log('canplay');
-            prepare_global_variables();
-            streaming = true;
+            console.log('streaming = false, canplay');
+            // https://developers.google.com/web/updates/2017/06/play-request-was-interrupted
+            if (video_play_promise !== undefined) {
+                video_play_promise.then(_ => {
+                    console.log('video_play_promise started');
+                    prepare_global_variables();
+                    streaming = true;
+                    requestAnimationFrameId = requestAnimationFrame(step);
+                })
+                .catch(error => {
+                    console.log('error with video_play_promise');
+                });
+            }
+            
         }
     }, false);
     
