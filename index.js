@@ -1345,8 +1345,8 @@ function start_camera_rest_code() {
         is_camera_selector = true;
     }
     
-    // for debug:
-    already_run_divice_id = "not_exist_id";
+    //// for debug:
+    //already_run_divice_id = "not_exist_id";
 
     console.log("already_run_divice_id = " + already_run_divice_id.toString())
     console.log("cameras_labels.length = " + cameras_labels.length.toString(10));
