@@ -47,32 +47,14 @@ let FILTER_WINDOW_WIDTH_FAST = 0.8;
 let FILTER_WINDOW_WIDTH_SLOW = 5;
 let START_PHOTO_AT_SUCCESS_FRAME_NO = 2;
 let success_frame_no = 0;
-let SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC = 0.35; // relative to passport height, [passport_heights per second]
+let SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC = 0.3; // relative to passport height, [passport_heights per second]
 let slow_motion_dist_threshold_per_sec = 0;
-let STATUS_MESSAGE_No_ABSENT = -1;
-
-let STATUS_PASSPORT_TO_CAMERA = 0;
-let STATUS_PASSPORT_TO_FRAME = 1;
-let STATUS_MAKE_PASSPORT_CLARITY = 2;
-let STATUS_MAKE_PASSPORT_BRIGHTNESS = 3;
-let STATUS_EDGES_UP_DOWN_TO_ZONES = 4;
-let STATUS_LEFT_RIGHT_DOWN_TO_ZONES = 5;
-let STATUS_DONT_MOVE_PASSPORT = 6;
-let STATUS_SUCCESS_DELAY_WAITING = 7;
-let STATUS_PHOTO_DONE = 8;
-
-let PAUSE_LENGTH_DOWN = 0.5;
-let PAUSE_LENGTH_UP = 2.0;
-let BUTTON_DELAY_SEC = 30;
-
 
 let CROP_SIZE_REQUAREMENT = 50;
 let CROP_STANDART_PASSPORT_HEIGHT = 300;
 let CROP_BRIGHTNESS_THRESHOLD = 80;
 let CROP_CLARITY_THRESHOLD = 350;
 let CROP_DATA_GRAY_MAX_SIZE = 20 * CROP_STANDART_PASSPORT_HEIGHT * CROP_STANDART_PASSPORT_HEIGHT; // big value with margin
-
-
 
 // https://unpkg.com/browse/scandit-sdk@4.6.1/src/lib/cameraAccess.ts
 let BACK_CAMERA_KEYWORS = [
@@ -184,8 +166,7 @@ let filter_down_slow = null;
 let points_display_resize_factor_x = 0;
 let points_display_resize_factor_y = 0;
 
-let status_message_no = 0;
-let message_index_old = STATUS_MESSAGE_No_ABSENT;
+let message_index_old = -1;
 
 let x1_crop = 0;
 let x2_crop = 0;
@@ -238,11 +219,6 @@ let canvas_photo_context = canvas_photo.getContext("2d");
 //let canvas_for_crop_tmp = document.getElementById("canvas_for_crop_tmp");
 //let canvas_for_crop_tmp_context = canvas_for_crop_tmp.getContext("2d");
 
-let manual_button = document.getElementById("manual_button");
-let button_delay_started = false;
-manual_button.onclick = make_photo;
-
-
 
 let timeForFPSCount = performance.now();
 let timeForFPSCountOld = timeForFPSCount;
@@ -256,75 +232,6 @@ let cameras_labels = null;
 let cameras_ids = null;
 let is_default_constrains = false;
 let select = null;
-
-let slow_changing_status = null;
-
-function make_photo() {
-    let photo_display_reisize_factor = 0.2;
-    let photo_display_width = roundSimple(width * photo_display_reisize_factor);
-    let photo_display_height = roundSimple(height * photo_display_reisize_factor);
-    canvas_photo.width = photo_display_width;
-    canvas_photo.height = photo_display_height;
-    canvas_photo_context.drawImage(video, 0, 0, width, height, 0, 0, photo_display_width, photo_display_height);
-    photoStatusElement.innerHTML = "фото (кадр номер " + frameIndex.toString(10) + ", " + width.toString(10) + "x" + height.toString(10) + ")";
-}
-    
-class SlowChangingStatus {
-
-    constructor(pause_length_down, pause_length_up) {
-        this.pause_length_down = pause_length_down * 1000; // seconds to milliseconds
-        this.pause_length_up = pause_length_up * 1000; // seconds to milliseconds
-        
-        this.status_message_no_request = STATUS_MESSAGE_No_ABSENT;
-        this.time_request = performance.now();
-        this.pause_length_request = 0.0;
-        this.is_busy = false;
-        
-        this.status_message_no_previouse_set = STATUS_MESSAGE_No_ABSENT;
-        
-        this.time_tmp = this.time_request;
-        this.time_delta = 0.0;
-        
-        this.first_set = true;
-        
-    }
-    
-    set(status_message_no_tmp) {
-        
-        if (this.first_set) {
-            this.first_set = false;
-            status(status_message_no_tmp);
-            this.status_message_no_previouse_set = status_message_no_tmp;
-            return;
-        }
-    
-        this.time_tmp = performance.now();
-    
-        if (this.is_busy) {
-            this.time_delta = this.time_tmp - this.time_request;
-            if (this.time_delta >= this.pause_length_request) {
-                status(this.status_message_no_request);
-                this.status_message_no_previouse_set = this.status_message_no_request;
-                this.is_busy = false;
-            }
-        }
-        
-        if ( ! this.is_busy) {
-            if (status_message_no_tmp != this.status_message_no_previouse_set) {
-                this.status_message_no_request = status_message_no_tmp;
-                this.time_request = this.time_tmp;
-                if (status_message_no_tmp > this.status_message_no_previouse_set) {
-                    this.pause_length_request = this.pause_length_down;
-                } else {
-                    this.pause_length_request = this.pause_length_up;
-                }
-                this.is_busy = true;
-            }
-        }
-    
-    }
-
-}
 
 function to_limits(x, size) {
     if (x < 0) {
@@ -774,73 +681,6 @@ function unitePoints(point_up, point_up_state, point_down, point_down_state, poi
     
 }
 
-function draw_passport_lines() {
-    canvas_display_context.lineWidth = FRAME_LINE_WIDTH;
-    canvas_display_context.strokeStyle = YELLOW;
-    for (let point_index = 0; point_index < PASSPORT_N_POINTS; point_index++) {
-        let point_index_2 = (point_index + 1) % PASSPORT_N_POINTS;
-        let xt_1 = points[point_index][0];
-        let yt_1 = points[point_index][1];
-        let xt_2 = points[point_index_2][0];
-        let yt_2 = points[point_index_2][1];
-        canvas_display_context.beginPath();
-        canvas_display_context.moveTo(xt_1, yt_1); 
-        canvas_display_context.lineTo(xt_2, yt_2);
-        canvas_display_context.stroke();
-    }
-    let point_index = 2;
-    let point_index_2 = 5;
-    let xt_1 = points[point_index][0];
-    let yt_1 = points[point_index][1];
-    let xt_2 = points[point_index_2][0];
-    let yt_2 = points[point_index_2][1];
-    canvas_display_context.beginPath();
-    canvas_display_context.moveTo(xt_1, yt_1); 
-    canvas_display_context.lineTo(xt_2, yt_2);
-    canvas_display_context.stroke();
-    
-    //PERSON_PHOTO_X1_RELATIVE
-    
-    let tmp_direction_horizontal_x = points[2][0] - points[5][0];
-    let tmp_direction_horizontal_y = points[2][1] - points[5][1];
-    
-    let tmp_direction_verticle_x = points[4][0] - points[5][0];
-    let tmp_direction_verticle_y = points[4][1] - points[5][1];
-    
-    let person_photo_x1 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y1_RELATIVE;
-    let person_photo_y1 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y1_RELATIVE;
-    
-    let person_photo_x2 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y1_RELATIVE;
-    let person_photo_y2 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y1_RELATIVE;
-    
-    let person_photo_x3 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y2_RELATIVE;
-    let person_photo_y3 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y2_RELATIVE;
-    
-    let person_photo_x4 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y2_RELATIVE;
-    let person_photo_y4 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y2_RELATIVE;
-    
-    canvas_display_context.beginPath();
-    canvas_display_context.moveTo(person_photo_x1, person_photo_y1); 
-    canvas_display_context.lineTo(person_photo_x2, person_photo_y2);
-    canvas_display_context.stroke();
-    
-    canvas_display_context.beginPath();
-    canvas_display_context.moveTo(person_photo_x2, person_photo_y2); 
-    canvas_display_context.lineTo(person_photo_x3, person_photo_y3);
-    canvas_display_context.stroke();
-    
-    canvas_display_context.beginPath();
-    canvas_display_context.moveTo(person_photo_x3, person_photo_y3); 
-    canvas_display_context.lineTo(person_photo_x4, person_photo_y4);
-    canvas_display_context.stroke();
-    
-    canvas_display_context.beginPath();
-    canvas_display_context.moveTo(person_photo_x4, person_photo_y4); 
-    canvas_display_context.lineTo(person_photo_x1, person_photo_y1);
-    canvas_display_context.stroke();
-
-}
-
 class EmaFilter {
     // exponential mooving avarage filter with bias correction
     // https://medium.com/datadriveninvestor/exponentially-weighted-average-for-deep-neural-networks-39873b8230e9
@@ -919,40 +759,48 @@ const status = message_index => {
     {
         switch (message_index) {
             
-            case STATUS_PASSPORT_TO_CAMERA:
+            case 0:
+            statusElement.innerHTML = '&nbsp;';
+            break;
+            
+            case 1:
             statusElement.innerHTML = 'поднесите развернутый вертикальный паспорт к камере';
             break;
             
-            case STATUS_PASSPORT_TO_FRAME:
+            case 2:
             statusElement.innerHTML = 'паспорт должен быть полностью в кадре';
             break;
             
-            case STATUS_MAKE_PASSPORT_CLARITY:
-            statusElement.innerHTML = 'добейтесь более четкого изображения паспорта';
-            break;
-            
-            case STATUS_MAKE_PASSPORT_BRIGHTNESS:
-            statusElement.innerHTML = 'улучшите освещение паспорта';
-            break;
-            
-            case STATUS_EDGES_UP_DOWN_TO_ZONES:
+            case 3:
             statusElement.innerHTML = 'верхний и нижний края паспорта должны быть в зеленой зоне';
             break;
             
-            case STATUS_LEFT_RIGHT_DOWN_TO_ZONES:
+            case 4:
             statusElement.innerHTML = 'левый и правый края паспорта должны быть в зеленой зоне';
             break;
-
-            case STATUS_DONT_MOVE_PASSPORT:
+            
+            case 5:
+            statusElement.innerHTML = 'Загрузка...';
+            break;
+            
+            case 6:
             statusElement.innerHTML = 'не двигайте паспорт';
             break;
             
-            //case STATUS_SUCCESS_DELAY_WAITING:
-            //// do nothing
-            //break;
+            case 7:
+            statusElement.innerHTML = 'не удалось запустить видеокамеру';
+            break;
             
-            case STATUS_PHOTO_DONE:
+            case 8:
             statusElement.innerHTML = 'сфотографировано, см. результат внизу страницы';
+            break;
+            
+            case 9:
+            statusElement.innerHTML = 'добейтесь более четкого изображения паспорта';
+            break;
+            
+            case 10:
+            statusElement.innerHTML = 'улучшите освещение паспорта';
             break;
             
         }
@@ -1116,6 +964,249 @@ function frame_processing() {
     //    }
     //}
     
+    canvas_display_context.lineWidth = 1;
+    
+    if (is_passport_detected) {
+        canvas_display_context.lineWidth = FRAME_LINE_WIDTH;
+        canvas_display_context.strokeStyle = YELLOW;
+        for (let point_index = 0; point_index < PASSPORT_N_POINTS; point_index++) {
+            let point_index_2 = (point_index + 1) % PASSPORT_N_POINTS;
+            let xt_1 = points[point_index][0];
+            let yt_1 = points[point_index][1];
+            let xt_2 = points[point_index_2][0];
+            let yt_2 = points[point_index_2][1];
+            canvas_display_context.beginPath();
+            canvas_display_context.moveTo(xt_1, yt_1); 
+            canvas_display_context.lineTo(xt_2, yt_2);
+            canvas_display_context.stroke();
+        }
+        let point_index = 2;
+        let point_index_2 = 5;
+        let xt_1 = points[point_index][0];
+        let yt_1 = points[point_index][1];
+        let xt_2 = points[point_index_2][0];
+        let yt_2 = points[point_index_2][1];
+        canvas_display_context.beginPath();
+        canvas_display_context.moveTo(xt_1, yt_1); 
+        canvas_display_context.lineTo(xt_2, yt_2);
+        canvas_display_context.stroke();
+        
+        //PERSON_PHOTO_X1_RELATIVE
+        
+        let tmp_direction_horizontal_x = points[2][0] - points[5][0];
+        let tmp_direction_horizontal_y = points[2][1] - points[5][1];
+        
+        let tmp_direction_verticle_x = points[4][0] - points[5][0];
+        let tmp_direction_verticle_y = points[4][1] - points[5][1];
+        
+        let person_photo_x1 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y1_RELATIVE;
+        let person_photo_y1 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y1_RELATIVE;
+        
+        let person_photo_x2 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y1_RELATIVE;
+        let person_photo_y2 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y1_RELATIVE;
+        
+        let person_photo_x3 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y2_RELATIVE;
+        let person_photo_y3 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X2_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y2_RELATIVE;
+        
+        let person_photo_x4 = points[5][0] + tmp_direction_horizontal_x * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_x * PERSON_PHOTO_Y2_RELATIVE;
+        let person_photo_y4 = points[5][1] + tmp_direction_horizontal_y * PERSON_PHOTO_X1_RELATIVE + tmp_direction_verticle_y * PERSON_PHOTO_Y2_RELATIVE;
+        
+        canvas_display_context.beginPath();
+        canvas_display_context.moveTo(person_photo_x1, person_photo_y1); 
+        canvas_display_context.lineTo(person_photo_x2, person_photo_y2);
+        canvas_display_context.stroke();
+        
+        canvas_display_context.beginPath();
+        canvas_display_context.moveTo(person_photo_x2, person_photo_y2); 
+        canvas_display_context.lineTo(person_photo_x3, person_photo_y3);
+        canvas_display_context.stroke();
+        
+        canvas_display_context.beginPath();
+        canvas_display_context.moveTo(person_photo_x3, person_photo_y3); 
+        canvas_display_context.lineTo(person_photo_x4, person_photo_y4);
+        canvas_display_context.stroke();
+        
+        canvas_display_context.beginPath();
+        canvas_display_context.moveTo(person_photo_x4, person_photo_y4); 
+        canvas_display_context.lineTo(person_photo_x1, person_photo_y1);
+        canvas_display_context.stroke();
+        
+        
+        
+    }
+    
+    let all_ok = false;
+    let all_all_ok = false;
+    if (is_passport_detected) {
+        let is_within_frame = true;
+        for (let point_index = 0; point_index < PASSPORT_N_POINTS; point_index++) {
+            let xt_1 = points[point_index][0];
+            let yt_1 = points[point_index][1];
+            if (xt_1 < 0) {
+                is_within_frame = false;
+                break;
+            }
+            if (xt_1 >= width_display) {
+                is_within_frame = false;
+                break;
+            }
+            if (yt_1 < 0) {
+                is_within_frame = false;
+                break;
+            }
+            if (yt_1 >= height_display) {
+                is_within_frame = false;
+                break;
+            }
+        }
+        if (is_within_frame) {
+            
+            
+            x1_crop = Math.max(points[0][0], points[4][0], points[5][0]);
+            x2_crop = Math.min(points[1][0], points[2][0], points[3][0]);
+            y1_crop = Math.max(points[0][1], points[1][1]);
+            y2_crop = Math.min(points[3][1], points[4][1]);
+            
+            x1_crop = to_limits(x1_crop, width_display);
+            x2_crop = to_limits(x2_crop, width_display);
+            y1_crop = to_limits(y1_crop, height_display);
+            y2_crop = to_limits(y2_crop, height_display);
+            
+            x1_crop = x1_crop * width / width_display;
+            x2_crop = x2_crop * width / width_display;
+            y1_crop = y1_crop * height / height_display;
+            y2_crop = y2_crop * height / height_display;
+            
+            
+            dx_crop = x2_crop - x1_crop + 1;
+            dy_crop = y2_crop - y1_crop + 1;
+            if ((dx_crop >= CROP_SIZE_REQUAREMENT) && (dy_crop >= CROP_SIZE_REQUAREMENT)) {
+                
+                let reisize_factor_2 = CROP_STANDART_PASSPORT_HEIGHT / dy_crop;
+                let width_tmp = roundSimple(reisize_factor_2 * dx_crop);
+
+                canvas_for_crop_hidden.width = width_tmp;
+                //canvas_for_crop_hidden.height = CROP_STANDART_PASSPORT_HEIGHT; // done before one time
+                canvas_for_crop_hidden_context.drawImage(video, x1_crop, y1_crop, dx_crop, dy_crop, 0, 0, width_tmp, CROP_STANDART_PASSPORT_HEIGHT);
+                let crop_ImageData = canvas_for_crop_hidden_context.getImageData(0, 0, width_tmp, CROP_STANDART_PASSPORT_HEIGHT);
+                let crop_data = crop_ImageData.data;
+                // https://stackoverflow.com/questions/53364140/how-can-i-grayscale-a-canvas-image-in-javascript
+                let pixel_index_0 = 0;
+                let lightness = 0;
+                let crop_data_gray_size_orig = crop_data.length / 4;
+                let crop_data_gray_size = Math.min(crop_data_gray_size_orig, CROP_DATA_GRAY_MAX_SIZE);
+                let brightness_sum = 0;
+                for (let pixel_index = 0; pixel_index < crop_data_gray_size; pixel_index ++) {
+                    brightness = roundSimple(0.299 * crop_data[pixel_index_0] + 0.587 * crop_data[pixel_index_0 + 1] + 0.114 * crop_data[pixel_index_0 + 2]); // like in opencv
+                    brightness_sum += brightness;
+                    crop_data_gray[pixel_index] = brightness;
+                    pixel_index_0 += 4;
+                }
+                let brightness_mean = brightness_sum / crop_data_gray_size;
+                
+                //let crop_data_laplacian_tmp = new Uint8ClampedArray(crop_data.length);
+                
+                let laplacian_value = 0;
+                let pixel_index = 0;
+                let pixel_index_right = 0;
+                let pixel_index_left = 0;
+                let pixel_index_up = 0;
+                let pixel_index_down = 0;
+                let pixel_index_offset = width_tmp;
+                let height_from_max_limit_tmp = Math.floor(CROP_DATA_GRAY_MAX_SIZE / width_tmp);
+                let height_tmp = Math.min(CROP_STANDART_PASSPORT_HEIGHT, height_from_max_limit_tmp);
+                let laplacian_sum = 0;
+                let laplacian_squared_sum = 0;
+                for (let yt_crop = 1; yt_crop < height_tmp - 1; yt_crop++) {
+                    pixel_index = pixel_index_offset + 1;
+                    pixel_index_left = pixel_index - 1;
+                    pixel_index_right = pixel_index + 1;
+                    pixel_index_up = pixel_index - width_tmp;
+                    pixel_index_down = pixel_index + width_tmp;
+                    
+                    for (let xt_crop = 1; xt_crop < width_tmp - 1; xt_crop++) {
+                        
+                        
+                        laplacian_value = -4 * crop_data_gray[pixel_index]  +
+                             crop_data_gray[pixel_index_right] +
+                             crop_data_gray[pixel_index_left] +
+                             crop_data_gray[pixel_index_up] +
+                             crop_data_gray[pixel_index_down];
+                        
+                        //crop_data_laplacian_tmp[4 * pixel_index] = laplacian_value;
+                        //crop_data_laplacian_tmp[4 * pixel_index + 1] = laplacian_value;
+                        //crop_data_laplacian_tmp[4 * pixel_index + 2] = laplacian_value;
+                        //crop_data_laplacian_tmp[4 * pixel_index + 3] = 255;
+                        
+                        laplacian_sum += laplacian_value;
+                        laplacian_squared_sum += laplacian_value * laplacian_value;
+                        
+                        pixel_index++;
+                        pixel_index_right++;
+                        pixel_index_left++;
+                        pixel_index_up++;
+                        pixel_index_down++;
+                    }
+                    pixel_index_offset += width_tmp;
+                }
+                
+                //let imgData_tmp = new ImageData(crop_data_laplacian_tmp, width_tmp, CROP_STANDART_PASSPORT_HEIGHT);
+                //canvas_for_crop_tmp.width = width_tmp;
+                //canvas_for_crop_tmp.height = CROP_STANDART_PASSPORT_HEIGHT;
+                //canvas_for_crop_tmp_context.putImageData(imgData_tmp, 0, 0);
+                
+                let n_tmp = (width_tmp - 2) * (height_tmp - 2);
+                let laplacian_mean = laplacian_sum / n_tmp;
+                let laplacian_squared_mean = laplacian_squared_sum / n_tmp;
+                laplacian_variation = laplacian_squared_mean - laplacian_mean * laplacian_mean;
+                
+                
+                let clarity_relative = laplacian_variation / CROP_CLARITY_THRESHOLD;
+                let brightness_relative = brightness_mean / CROP_BRIGHTNESS_THRESHOLD;
+                
+                if (clarity_relative < 1.0) {
+                    status(9);
+                }
+                
+                if (brightness_relative < 1.0) {
+                    status(10);
+                }
+                
+            }
+            
+            
+            let in_zone = true;
+            if (is_frame_wider) {
+                in_zone = in_zone && (points[0][1] <= zone_y1);
+                in_zone = in_zone && (points[1][1] <= zone_y1);
+                in_zone = in_zone && (points[3][1] >= zone_y2);
+                in_zone = in_zone && (points[4][1] >= zone_y2);
+                if (in_zone) {
+                    all_ok = true;
+                } else {
+                    status(3);
+                }
+            } else {
+                in_zone = in_zone && (points[0][0] <= zone_x1);
+                in_zone = in_zone && (points[5][0] <= zone_x1);
+                in_zone = in_zone && (points[4][0] <= zone_x1);
+                in_zone = in_zone && (points[1][0] >= zone_x2);
+                in_zone = in_zone && (points[2][0] >= zone_x2);
+                in_zone = in_zone && (points[3][0] >= zone_x2);
+                if (in_zone) {
+                    all_ok = true;
+                } else {
+                    status(4);
+                }
+            }
+        } else {
+            status(2);
+        }
+          
+    } else {
+        status(1);
+    }
+    
     if (is_up_page_successful) {
         find_page_center(points, UP_PAGE_POINTS_INDEXES, point_up);
         filter_up_fast.step(point_up, point_up_fast);
@@ -1133,220 +1224,70 @@ function frame_processing() {
         filter_down_fast.reset();
         filter_down_slow.reset();
     }
-
-    if ( ! is_passport_detected) {
-        return STATUS_PASSPORT_TO_CAMERA;
-    }
     
-    draw_passport_lines();
+    //canvas_display_context.strokeStyle = "rgba(255, 0, 0, 1.0)";
+    //canvas_display_context.beginPath();
+    //canvas_display_context.arc(point_up_fast[0], point_up_fast[1], 5, 0, Math.PI * 2, true);
+    //canvas_display_context.stroke();
+    //
+    //canvas_display_context.strokeStyle = "rgba(0, 255, 0, 1.0)";
+    //canvas_display_context.beginPath();
+    //canvas_display_context.arc(point_up_slow[0], point_up_slow[1], 5, 0, Math.PI * 2, true);
+    //canvas_display_context.stroke();
+    //
+    //canvas_display_context.strokeStyle = "rgba(255, 0, 0, 1.0)";
+    //canvas_display_context.beginPath();
+    //canvas_display_context.arc(point_down_fast[0], point_down_fast[1], 5, 0, Math.PI * 2, true);
+    //canvas_display_context.stroke();
+    //
+    //canvas_display_context.strokeStyle = "rgba(0, 255, 0, 1.0)";
+    //canvas_display_context.beginPath();
+    //canvas_display_context.arc(point_down_slow[0], point_down_slow[1], 5, 0, Math.PI * 2, true);
+    //canvas_display_context.stroke();
     
-    
-    if ( ! button_delay_started) {
-        setTimeout(function() { manual_button.style = "";}, BUTTON_DELAY_SEC * 1000);
-        button_delay_started = true;
-    }
-    
-    let is_within_frame = true;
-    for (let point_index = 0; point_index < PASSPORT_N_POINTS; point_index++) {
-        let xt_1 = points[point_index][0];
-        let yt_1 = points[point_index][1];
-        if (xt_1 < 0) {
-            is_within_frame = false;
-            break;
-        }
-        if (xt_1 >= width_display) {
-            is_within_frame = false;
-            break;
-        }
-        if (yt_1 < 0) {
-            is_within_frame = false;
-            break;
-        }
-        if (yt_1 >= height_display) {
-            is_within_frame = false;
-            break;
-        }
-    }
-    
-    if ( ! is_within_frame) {
-        return STATUS_PASSPORT_TO_FRAME;
-    }
-    
-    
-    let is_clarity = true;
-    let is_brightness = true;
-    
-    x1_crop = Math.max(points[0][0], points[4][0], points[5][0]);
-    x2_crop = Math.min(points[1][0], points[2][0], points[3][0]);
-    y1_crop = Math.max(points[0][1], points[1][1]);
-    y2_crop = Math.min(points[3][1], points[4][1]);
-    
-    x1_crop = to_limits(x1_crop, width_display);
-    x2_crop = to_limits(x2_crop, width_display);
-    y1_crop = to_limits(y1_crop, height_display);
-    y2_crop = to_limits(y2_crop, height_display);
-    
-    x1_crop = x1_crop * width / width_display;
-    x2_crop = x2_crop * width / width_display;
-    y1_crop = y1_crop * height / height_display;
-    y2_crop = y2_crop * height / height_display;
-    
-    
-    dx_crop = x2_crop - x1_crop + 1;
-    dy_crop = y2_crop - y1_crop + 1;
-    if ((dx_crop >= CROP_SIZE_REQUAREMENT) && (dy_crop >= CROP_SIZE_REQUAREMENT)) {
-        
-        let reisize_factor_2 = CROP_STANDART_PASSPORT_HEIGHT / dy_crop;
-        let width_tmp = roundSimple(reisize_factor_2 * dx_crop);
-
-        canvas_for_crop_hidden.width = width_tmp;
-        //canvas_for_crop_hidden.height = CROP_STANDART_PASSPORT_HEIGHT; // done before one time
-        canvas_for_crop_hidden_context.drawImage(video, x1_crop, y1_crop, dx_crop, dy_crop, 0, 0, width_tmp, CROP_STANDART_PASSPORT_HEIGHT);
-        let crop_ImageData = canvas_for_crop_hidden_context.getImageData(0, 0, width_tmp, CROP_STANDART_PASSPORT_HEIGHT);
-        let crop_data = crop_ImageData.data;
-        // https://stackoverflow.com/questions/53364140/how-can-i-grayscale-a-canvas-image-in-javascript
-        let pixel_index_0 = 0;
-        let lightness = 0;
-        let crop_data_gray_size_orig = crop_data.length / 4;
-        let crop_data_gray_size = Math.min(crop_data_gray_size_orig, CROP_DATA_GRAY_MAX_SIZE);
-        let brightness_sum = 0;
-        for (let pixel_index = 0; pixel_index < crop_data_gray_size; pixel_index ++) {
-            brightness = roundSimple(0.299 * crop_data[pixel_index_0] + 0.587 * crop_data[pixel_index_0 + 1] + 0.114 * crop_data[pixel_index_0 + 2]); // like in opencv
-            brightness_sum += brightness;
-            crop_data_gray[pixel_index] = brightness;
-            pixel_index_0 += 4;
-        }
-        let brightness_mean = brightness_sum / crop_data_gray_size;
-        
-        //let crop_data_laplacian_tmp = new Uint8ClampedArray(crop_data.length);
-        
-        let laplacian_value = 0;
-        let pixel_index = 0;
-        let pixel_index_right = 0;
-        let pixel_index_left = 0;
-        let pixel_index_up = 0;
-        let pixel_index_down = 0;
-        let pixel_index_offset = width_tmp;
-        let height_from_max_limit_tmp = Math.floor(CROP_DATA_GRAY_MAX_SIZE / width_tmp);
-        let height_tmp = Math.min(CROP_STANDART_PASSPORT_HEIGHT, height_from_max_limit_tmp);
-        let laplacian_sum = 0;
-        let laplacian_squared_sum = 0;
-        for (let yt_crop = 1; yt_crop < height_tmp - 1; yt_crop++) {
-            pixel_index = pixel_index_offset + 1;
-            pixel_index_left = pixel_index - 1;
-            pixel_index_right = pixel_index + 1;
-            pixel_index_up = pixel_index - width_tmp;
-            pixel_index_down = pixel_index + width_tmp;
-            
-            for (let xt_crop = 1; xt_crop < width_tmp - 1; xt_crop++) {
-                
-                
-                laplacian_value = -4 * crop_data_gray[pixel_index]  +
-                     crop_data_gray[pixel_index_right] +
-                     crop_data_gray[pixel_index_left] +
-                     crop_data_gray[pixel_index_up] +
-                     crop_data_gray[pixel_index_down];
-                
-                //crop_data_laplacian_tmp[4 * pixel_index] = laplacian_value;
-                //crop_data_laplacian_tmp[4 * pixel_index + 1] = laplacian_value;
-                //crop_data_laplacian_tmp[4 * pixel_index + 2] = laplacian_value;
-                //crop_data_laplacian_tmp[4 * pixel_index + 3] = 255;
-                
-                laplacian_sum += laplacian_value;
-                laplacian_squared_sum += laplacian_value * laplacian_value;
-                
-                pixel_index++;
-                pixel_index_right++;
-                pixel_index_left++;
-                pixel_index_up++;
-                pixel_index_down++;
+    if (all_ok) {
+        let is_slow_motion = false;
+        if (is_passport_detected) {
+            if (filter_up_slow.is_saturated() && filter_down_slow.is_saturated()) {
+                if (CountFPSIndex >= 1)  {
+                    let slow_motion_dist_threshold = slow_motion_dist_threshold_per_sec / FPS;
+                    let dist_up = dist_2d(point_up_fast, point_up_slow);
+                    let dist_down = dist_2d(point_down_fast, point_down_slow);
+                    if (dist_up <= slow_motion_dist_threshold && dist_down <= slow_motion_dist_threshold) {
+                        is_slow_motion = true;        
+                    }
+                }
             }
-            pixel_index_offset += width_tmp;
         }
-        
-        //let imgData_tmp = new ImageData(crop_data_laplacian_tmp, width_tmp, CROP_STANDART_PASSPORT_HEIGHT);
-        //canvas_for_crop_tmp.width = width_tmp;
-        //canvas_for_crop_tmp.height = CROP_STANDART_PASSPORT_HEIGHT;
-        //canvas_for_crop_tmp_context.putImageData(imgData_tmp, 0, 0);
-        
-        let n_tmp = (width_tmp - 2) * (height_tmp - 2);
-        let laplacian_mean = laplacian_sum / n_tmp;
-        let laplacian_squared_mean = laplacian_squared_sum / n_tmp;
-        laplacian_variation = laplacian_squared_mean - laplacian_mean * laplacian_mean;
-        
-        
-        let clarity_relative = laplacian_variation / CROP_CLARITY_THRESHOLD;
-        let brightness_relative = brightness_mean / CROP_BRIGHTNESS_THRESHOLD;
-        
-        if (clarity_relative < 1.0) {
-            is_clarity = false;
-        }
-        
-        if (brightness_relative < 1.0) {
-            is_brightness = false;
-        }
-    }
-        
-    if ( ! is_clarity) {
-        return STATUS_MAKE_PASSPORT_CLARITY;
-    }
-    
-    if ( ! is_brightness) {
-        return STATUS_MAKE_PASSPORT_BRIGHTNESS;
-    }
-    
-    let in_zone = true;
-    if (is_frame_wider) {
-        in_zone = in_zone && (points[0][1] <= zone_y1);
-        in_zone = in_zone && (points[1][1] <= zone_y1);
-        in_zone = in_zone && (points[3][1] >= zone_y2);
-        in_zone = in_zone && (points[4][1] >= zone_y2);
-    } else {
-        in_zone = in_zone && (points[0][0] <= zone_x1);
-        in_zone = in_zone && (points[5][0] <= zone_x1);
-        in_zone = in_zone && (points[4][0] <= zone_x1);
-        in_zone = in_zone && (points[1][0] >= zone_x2);
-        in_zone = in_zone && (points[2][0] >= zone_x2);
-        in_zone = in_zone && (points[3][0] >= zone_x2);
-    }
-    
-    if ( ! in_zone) {
-        if (is_frame_wider) {
-            return STATUS_EDGES_UP_DOWN_TO_ZONES;
+        if (is_slow_motion) {
+            all_all_ok = true;
+            status(0);
         } else {
-            return STATUS_LEFT_RIGHT_DOWN_TO_ZONES;
+            status(6);
         }
     }
     
-    let is_slow_motion = false;
-    if (filter_up_slow.is_saturated() && filter_down_slow.is_saturated()) {
-        if (CountFPSIndex >= 1)  {
-            let slow_motion_dist_threshold = slow_motion_dist_threshold_per_sec / FPS;
-            let dist_up = dist_2d(point_up_fast, point_up_slow);
-            let dist_down = dist_2d(point_down_fast, point_down_slow);
-            if (dist_up <= slow_motion_dist_threshold && dist_down <= slow_motion_dist_threshold) {
-                is_slow_motion = true;        
-            }
+    let all_all_all_ok = false;
+    if (all_all_ok) {
+        if (success_frame_no >= START_PHOTO_AT_SUCCESS_FRAME_NO) {
+            all_all_all_ok = true;
         }
+        success_frame_no++;
+    } else {
+        success_frame_no = 0;
     }
     
-    if ( ! is_slow_motion) {
-        return STATUS_DONT_MOVE_PASSPORT;
+    if (all_all_all_ok) {
+        status(8);
+        let photo_display_reisize_factor = 0.2;
+        let photo_display_width = roundSimple(width * photo_display_reisize_factor);
+        let photo_display_height = roundSimple(height * photo_display_reisize_factor);
+        canvas_photo.width = photo_display_width;
+        canvas_photo.height = photo_display_height;
+        canvas_photo_context.drawImage(video, 0, 0, width, height, 0, 0, photo_display_width, photo_display_height);
+        photoStatusElement.innerHTML = "фото (кадр номер " + frameIndex.toString(10) + ", " + width.toString(10) + "x" + height.toString(10) + ")";
     }
     
-    let success_delay_done = false;
-    if (success_frame_no >= START_PHOTO_AT_SUCCESS_FRAME_NO) {
-        success_delay_done = true;
-    }
-    success_frame_no++;
-    
-    if ( ! success_delay_done) {
-        return STATUS_SUCCESS_DELAY_WAITING;
-    }
-    
-    make_photo();
-    return STATUS_PHOTO_DONE;
-   
 }
 
 step_first_run = true;
@@ -1363,21 +1304,14 @@ function step() {
                 if (isCountFPS) {
                     timeForFPSCount = performance.now();
                 }
-                
-                status_message_no = frame_processing();
-                //status(status_message_no);
-                slow_changing_status.set(status_message_no);
-                
-                if (status_message_no != STATUS_SUCCESS_DELAY_WAITING && status_message_no != STATUS_PHOTO_DONE) {
-                    success_frame_no = 0;
-                }
+                frame_processing();
               
                 if (isCountFPS) {
                     let timeDelta = timeForFPSCount - timeForFPSCountOld;
                     let timeDeltaSec = timeDelta / 1000;
                     FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
                     timeForFPSCountOld = timeForFPSCount;
-                    FPSElement.innerHTML = "FPS: " + FPS.toString(10);
+                    FPSElement.innerHTML = "FPS: " + FPS.toString(10) +  "  " + laplacian_variation.toString(10);
                     CountFPSIndex++;
                 }
               
@@ -1492,10 +1426,9 @@ function prepare_global_variables() {
     }
     slow_motion_dist_threshold_per_sec = SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC * pasport_height_estimation_display;
     
-    slow_changing_status = new SlowChangingStatus(PAUSE_LENGTH_DOWN, PAUSE_LENGTH_UP);
     
-    //status(5);
-    statusElement.innerHTML = 'Загрузка...';
+    
+    status(5);
     
 }
 
@@ -1549,8 +1482,7 @@ function select_change(event) {
         })
         .catch(function(err) {
             console.log("An error occured! " + err);
-            //status(7);
-            statusElement.innerHTML = 'не удалось запустить видеокамеру';
+            status(7);
         });
     
 }
@@ -1750,8 +1682,7 @@ function start_camera_rest_code() {
                 })
                 .catch(function(err) {
                     console.log("An error occured! " + err);
-                    //status(7);
-                    statusElement.innerHTML = 'не удалось запустить видеокамеру';
+                    status(7);
                 });
         }
 
@@ -1791,14 +1722,12 @@ function start_camera() {
         })
         .catch(function(err) {
             console.log("An error occured! " + err);
-            //status(7);
-            statusElement.innerHTML = 'не удалось запустить видеокамеру';
+            status(7);
         });
     
     if (getusermedia_promise == null) {
         //console.log("getusermedia_promise == null");
-        //status(7);
-        statusElement.innerHTML = 'не удалось запустить видеокамеру';
+        status(7);
     } else {
         getusermedia_promise.then(function(s) {
             is_default_constrains = false;

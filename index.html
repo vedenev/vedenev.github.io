@@ -1,18 +1,20 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>version: canvaces, selector</title>
+<title>version: canvaces, quality</title>
 </head>
 <body>
-version: canvaces, selector<br>
+version: canvaces, quality<br>
 <p id="fps_display">FPS: 0</p>
 <p id="status">Загрузка..</p>
 <p id="log"></p>
 <video style="display: inline-block; width: 0px; height: 0px;" id="video" muted="" autoplay="" playsinline=""></video>
 <canvas id="canvas_intermediate_hidden" width=540 height=720 style="display: none"></canvas>
 <canvas id="canvas_for_net_hidden" width=256 height=384 style="display: none"></canvas>
-<canvas id="canvas_display" width=540 height=720></canvas>
-<p id="photo_status">&nbsp;</p>
+<canvas id="canvas_for_crop_hidden" width=212 height=300 style="display: none"></canvas>
+<canvas id="canvas_display" width=540 height=720></canvas><br>
+<button type="button" id = "manual_button" style="display: none">Сфотографировать вручную</button><br>
+<p id="photo_status">&nbsp;</p><br>
 <canvas id="canvas_photo" width=256 height=384></canvas>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
 <script src='./index.js'></script>
