@@ -1,6 +1,6 @@
 
   
-const MODEL_PATH = './tf_model_t082_unfixed/model.json';
+const MODEL_PATH = './tf_model_t123_unfixed/model.json';
 //tf.ENV.set('WEBGL_PACK', false);
 let START_WITH_ENVIROMENT_CAMERA = true;
 
@@ -24,7 +24,7 @@ let PERSON_PHOTO_X2_RELATIVE = PERSON_PHOTO_X2_MM / PAGE_SIZE_MM_X
 let PERSON_PHOTO_Y1_RELATIVE = PERSON_PHOTO_Y1_MM / PAGE_SIZE_MM_Y 
 let PERSON_PHOTO_Y2_RELATIVE = PERSON_PHOTO_Y2_MM / PAGE_SIZE_MM_Y
 let PAD_SIZE = 96;
-let NET_SCALE = 32; 
+let NET_SCALE = 16; 
 let PASSPORT_N_POINTS = 6;
 let N_CHANNELS = 3;
 let THRESHOLD = 0.3;

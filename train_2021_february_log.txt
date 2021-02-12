@@ -1,0 +1,63 @@
+2021-02-07:
+
+t117_train_39.py
+smaller dataset: train_size = 4582, val_size = 96, loss train: 0.000378, loss val: 0.0003373
+full dataset:  train_size = 16164, val_size = 96, loss train: 0.000477, loss val: 0.000248, -26%
+val_time_mean_t = 0.0661041537920634
+
+
+2021-02-08:
+
+t119_train_31.py, net with upsample
+full dataset: loss train: 0.00069, loss val: 0.0004508
+
+t120_train_32.py, net with upsample, longer training, more competitors, weaker augmentation, full dataset
+loss train: 0.000483, loss val: 0.0002849
+val_time_mean_t = 0.044042, BATCH_SIZE_VALIDATION = 8
+
+t117_train_39.py
+smaller dataset: train_size = 4582, val_size = 96
+more competitors:
+STAGES_N_TRAINS = [5, 3, 1, 1]
+STAGES_N_EPOCHS = [5, 15, 350, 5]
+loss train: 0.000394, loss val: 0.0003008
+
+
+2021-02-10:
+
+t117_train_39.py
+full dataset:  train_size = 16164, val_size = 96
+val_time_mean_t = 0.0488, BATCH_SIZE_VALIDATION = 8
+loss train: 0.0004106, loss val: 0.0001948
+
+
+2021-02-11:
+
+t121_train_40.py
+on server
+full dataset:  train_size = 16164, val_size = 96
+val_time_mean_t = 0.0489
+time_13.22.txt
+STAGES_N_TRAINS = [5, 3, 1, 1]
+STAGES_N_EPOCHS = [5, 15, 150, 5]
+STAGES_LEARNING_RATES = [0.0001, 0.0004, 0.00025, 0.00001]
+loss train: 0.0003811, loss val: 0.0001829
+
+t123_train_41.py
+on home
+continue t121_train_40.py
+STAGES_N_TRAINS = [1, 1]
+STAGES_N_EPOCHS = [130, 10]
+STAGES_LEARNING_RATES = [0.00025, 0.000005]
+time_2.78.txt
+loss train: 0.0003617, loss val: 0.0001717
+
+t127_train_43.py
+on home
+N_FEATUREMAPS = [N_INPUT_CHANNELS, 2, 4, 6, 8, 10, 12, 14, 10, N_CLASSES]
+STAGES_N_TRAINS = [5, 3, 1, 1]
+STAGES_N_EPOCHS = [5, 15, 130, 20]
+time_4.38.txt
+val_time_mean_t = 0.04695
+loss train: 0.0005855, loss val: 0.0003014
+
