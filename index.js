@@ -1,6 +1,6 @@
 
-  
-const MODEL_PATH = './tf_model_t123_unfixed/model.json';
+
+const MODEL_PATH = './tf_model_t141_unfixed_tmp/model.json';
 //tf.ENV.set('WEBGL_PACK', false);
 let START_WITH_ENVIROMENT_CAMERA = true;
 
