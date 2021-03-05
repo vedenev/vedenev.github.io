@@ -1,19 +1,35 @@
-
-
+// net parameters:
 const MODEL_PATH = './tf_model_t141_unfixed_tmp/model.json';
+let PASSPORT_TRAIN_SIZE_PX_X = 256;
+let PASSPORT_TRAIN_SIZE_PX_Y = 364;
+let PAD_SIZE = 96;
+let NET_SCALE = 16;
+
+
+const MODEL_PATH_FLARE = './tf_model_t195_flare/model.json';
+let N_INPUT_CHANNELS_FLARE = 3;
+let N_INPUT_CHANNELS_ALL_FLARE = N_INPUT_CHANNELS_FLARE + 3;
+let NET_INPUT_SIZE_X_FLARE = 192;
+let NET_INPUT_SIZE_Y_FLARE = 272;
+let NET_SCALE_FLARE = 2**3; // 8
+let NET_OUTPUT_SIZE_X_FLARE = NET_INPUT_SIZE_X_FLARE / NET_SCALE_FLARE;
+let NET_OUTPUT_SIZE_Y_FLARE = NET_INPUT_SIZE_Y_FLARE / NET_SCALE_FLARE;
+let NET_OUTPUT_SIZE_FLARE = NET_OUTPUT_SIZE_X_FLARE * NET_OUTPUT_SIZE_Y_FLARE;
+let BRIGHTNESS_APMPLIFIER = 0.6;
+let FLARE_BRIGHTNESS_THRESHOLD = 6.58; // fpr=0.06719367588932806, tpr=0.5328014184397163, threshold=6.579958
+
 //tf.ENV.set('WEBGL_PACK', false);
+
 let START_WITH_ENVIROMENT_CAMERA = true;
 
 let BIG_WIDTH = 4096;
 let BIG_HEIGHT = 2160;
-let N_FRAMES_FPS_COUNT = 5;
+let N_FRAMES_FPS_COUNT = 20;
 let WIDTH_DISPLAY_RELATIVE_MAX = 0.6;
 let HEIGHT_DISPLAY_RELATIVE_MAX = 0.6;
 
 let PAGE_SIZE_MM_X = 125;
 let PAGE_SIZE_MM_Y = 88;
-let PASSPORT_TRAIN_SIZE_PX_X = 256;
-let PASSPORT_TRAIN_SIZE_PX_Y = 364;
 let PASSPORT_ASPECT_RATIO = PASSPORT_TRAIN_SIZE_PX_X / PASSPORT_TRAIN_SIZE_PX_Y
 let PERSON_PHOTO_X1_MM = 5;
 let PERSON_PHOTO_X2_MM = 40;
@@ -23,8 +39,6 @@ let PERSON_PHOTO_X1_RELATIVE = PERSON_PHOTO_X1_MM / PAGE_SIZE_MM_X
 let PERSON_PHOTO_X2_RELATIVE = PERSON_PHOTO_X2_MM / PAGE_SIZE_MM_X 
 let PERSON_PHOTO_Y1_RELATIVE = PERSON_PHOTO_Y1_MM / PAGE_SIZE_MM_Y 
 let PERSON_PHOTO_Y2_RELATIVE = PERSON_PHOTO_Y2_MM / PAGE_SIZE_MM_Y
-let PAD_SIZE = 96;
-let NET_SCALE = 16; 
 let PASSPORT_N_POINTS = 6;
 let N_CHANNELS = 3;
 let THRESHOLD = 0.3;
@@ -41,6 +55,9 @@ let ZONE_SIZE_RELATIVE = 0.15;
 let GREEN_TRANSPARENT = "rgba(0, 255, 0, 0.5)";
 let YELLOW = "rgba(255, 255, 0, 1.0)";
 let BLACK = "rgba(0, 0, 0, 1.0)";
+let RED = "rgba(255, 0, 0, 1.0)";
+let GREEN = "rgba(0, 255, 0, 1.0)";
+let CYAN = "rgba(0, 255, 255, 1.0)";
 let FRAME_LINE_WIDTH = 2;
 
 let FILTER_WINDOW_WIDTH_FAST = 0.8;
@@ -58,8 +75,9 @@ let STATUS_MAKE_PASSPORT_BRIGHTNESS = 3;
 let STATUS_EDGES_UP_DOWN_TO_ZONES = 4;
 let STATUS_LEFT_RIGHT_DOWN_TO_ZONES = 5;
 let STATUS_DONT_MOVE_PASSPORT = 6;
-let STATUS_SUCCESS_DELAY_WAITING = 7;
-let STATUS_PHOTO_DONE = 8;
+let STATUS_FLARE_DETECTED = 7;
+let STATUS_SUCCESS_DELAY_WAITING = 8;
+let STATUS_PHOTO_DONE = 9;
 
 let PAUSE_LENGTH_DOWN = 0.5;
 let PAUSE_LENGTH_UP = 2.0;
@@ -196,6 +214,31 @@ let dy_crop = 0;
 let crop_data_gray = new Uint8ClampedArray(CROP_DATA_GRAY_MAX_SIZE);
 let laplacian_variation = 0;
 
+// for flare detection:
+let xi1 = 0;
+let xi2 = 0;
+let yi1 = 0;
+let yi2 = 0;
+let dxi = 0;
+let dyi = 0;
+let xc1i1 = 0;
+let xc1i2 = 0;
+let xc2i1 = 0;
+let xc2i2 = 0;
+let dxc1 = 0;
+let dxc2 = 0;
+let x1_for_flare = 0;
+let x2_for_flare = 0;
+let y1_for_flare = 0;
+let y2_for_flare = 0;
+let dx_for_flare = 0;
+let dy_for_flare = 0;
+let points_cropped = Array.from(Array(PASSPORT_N_POINTS), () => new Array(2));
+for (let index = 0; index < PASSPORT_N_POINTS; index++) {
+    points_cropped[index][0] = 0;
+    points_cropped[index][1] = 0;
+}
+
 
 
 let video = document.getElementById("video");
@@ -232,6 +275,32 @@ let canvas_for_crop_hidden = document.getElementById("canvas_for_crop_hidden");
 canvas_for_crop_hidden.height = CROP_STANDART_PASSPORT_HEIGHT;
 let canvas_for_crop_hidden_context = canvas_for_crop_hidden.getContext("2d");
 
+let image_up_page_internal_crop_1_hidden = document.getElementById("image_up_page_internal_crop_1_hidden");
+image_up_page_internal_crop_1_hidden.width = 1
+image_up_page_internal_crop_1_hidden.height = 1
+let image_up_page_internal_crop_1_hidden_context = image_up_page_internal_crop_1_hidden.getContext("2d");
+
+let image_up_page_internal_crop_2_hidden = document.getElementById("image_up_page_internal_crop_2_hidden");
+image_up_page_internal_crop_2_hidden.width = 1
+image_up_page_internal_crop_2_hidden.height = 1
+let image_up_page_internal_crop_2_hidden_context = image_up_page_internal_crop_2_hidden.getContext("2d");
+
+let passport_crop_hidden = document.getElementById("passport_crop_hidden");
+passport_crop_hidden.width = NET_INPUT_SIZE_X_FLARE;
+passport_crop_hidden.height = NET_INPUT_SIZE_Y_FLARE;
+let passport_crop_hidden_context = passport_crop_hidden.getContext("2d");
+
+let flare_masks_hidden = document.getElementById("flare_masks_hidden");
+flare_masks_hidden.width = NET_INPUT_SIZE_X_FLARE;
+flare_masks_hidden.height = NET_INPUT_SIZE_Y_FLARE;
+let flare_masks_hidden_context = flare_masks_hidden.getContext("2d");
+
+
+//let canvas_flare_tmp = document.getElementById("canvas_flare_tmp");
+//canvas_flare_tmp.width = NET_OUTPUT_SIZE_X_FLARE;
+//canvas_flare_tmp.height = NET_OUTPUT_SIZE_Y_FLARE;
+//let canvas_flare_tmp_context = canvas_flare_tmp.getContext("2d");
+
 let canvas_photo = document.getElementById("canvas_photo");
 let canvas_photo_context = canvas_photo.getContext("2d");
 
@@ -258,6 +327,12 @@ let is_default_constrains = false;
 let select = null;
 
 let slow_changing_status = null;
+
+let time_predict_1 = performance.now();
+let time_predict_2 = performance.now();
+let time_predict_sum = 0;
+let time_predict_n = 0;
+let time_predict_mean = 0;
 
 function make_photo() {
     let photo_display_reisize_factor = 0.2;
@@ -947,6 +1022,10 @@ const status = message_index => {
             statusElement.innerHTML = 'не двигайте паспорт';
             break;
             
+            case STATUS_FLARE_DETECTED:
+            statusElement.innerHTML = 'добейтесь отсутсвия бликов и голограмм';
+            break;
+            
             //case STATUS_SUCCESS_DELAY_WAITING:
             //// do nothing
             //break;
@@ -970,6 +1049,8 @@ function frame_processing() {
     //canvas_tmp_1_context.drawImage(canvas_for_net_hidden, 0, 0, net_input_size_x, net_input_size_y, 0, 0, net_input_size_x, net_input_size_y);
     
     // https://github.com/tensorflow/tfjs-examples/blob/master/mobilenet/index.js
+    time_predict_1 = performance.now();
+    
     const tf_processing = tf.tidy(() => {
         frame_tf = tf.browser.fromPixels(canvas_for_net_hidden, N_CHANNELS).toFloat();
         const offset = tf.scalar(255);
@@ -982,6 +1063,9 @@ function frame_processing() {
     });
     //await tf_processing.arraySync();
     //tf_processing.arraySync();
+    time_predict_2 = performance.now();
+    time_predict_sum += time_predict_2 - time_predict_1
+    time_predict_n++;
     
     //console.log(tf_processing);
     //console.log(net_output_size_y);
@@ -1068,14 +1152,7 @@ function frame_processing() {
     }
     
     
-    canvas_display_context.fillStyle = GREEN_TRANSPARENT;
-    if(is_frame_wider) {
-        canvas_display_context.fillRect(0, 0, width_display, zone_y1);
-        canvas_display_context.fillRect(0, zone_y2, width_display, zone_y1);
-    } else {
-        canvas_display_context.fillRect(0, 0, zone_x1, height_display);
-        canvas_display_context.fillRect(zone_x2, 0, zone_x1, height_display);
-    }
+    
     
     
     
@@ -1132,6 +1209,47 @@ function frame_processing() {
     } else {
         filter_down_fast.reset();
         filter_down_slow.reset();
+    }
+    
+    // for flare detection, for passport color estimation and crop, before add drawnings:
+    if (is_passport_detected) {
+        // estimate mean passport color from crop of up page
+        xi1 = Math.max(points[0][0], points[5][0]);
+        xi1 = Math.ceil(xi1);
+        xi2 = Math.min(points[1][0], points[2][0]);
+        xi2 = Math.ceil(xi2);
+        yi1 = Math.max(points[0][1], points[1][1]);
+        yi1 = Math.ceil(yi1);
+        yi2 = Math.min(points[5][1], points[2][1]);
+        yi2 = Math.ceil(yi2);
+        dxi = xi2 - xi1;
+        dyi = roundSimple(yi2 - yi1);
+        xc1i1 = xi1;
+        xc1i2 = roundSimple(xi1 + 0.2 * dxi);
+        xc2i1 = roundSimple(xi1 + 0.7 * dxi);
+        xc2i2 = roundSimple(xi1 + 0.9 * dxi);
+        dxc1 = xc1i2 - xc1i1;
+        dxc2 = xc2i2 - xc2i1;
+        image_up_page_internal_crop_1_hidden_context.drawImage(canvas_display, xc1i1, yi1, dxc1, dyi,   0, 0, 1, 1);
+        image_up_page_internal_crop_2_hidden_context.drawImage(canvas_display, xc2i1, yi1, dxc2, dyi,   0, 0, 1, 1);
+        
+        x1_for_flare = Math.floor(Math.min(points[0][0], points[4][0], points[5][0]));
+        x2_for_flare = Math.ceil(Math.max(points[1][0], points[2][0], points[3][0]));
+        y1_for_flare = Math.floor(Math.min(points[0][1], points[1][1]));
+        y2_for_flare = Math.ceil(Math.max(points[3][1], points[4][1]));
+        dx_for_flare = x2_for_flare - x1_for_flare;
+        dy_for_flare = y2_for_flare - y1_for_flare;
+        passport_crop_hidden_context.drawImage(canvas_display, x1_for_flare, y1_for_flare, dx_for_flare, dy_for_flare,   0, 0, NET_INPUT_SIZE_X_FLARE, NET_INPUT_SIZE_Y_FLARE);
+    }
+    
+    // draw green zones:
+    canvas_display_context.fillStyle = GREEN_TRANSPARENT;
+    if(is_frame_wider) {
+        canvas_display_context.fillRect(0, 0, width_display, zone_y1);
+        canvas_display_context.fillRect(0, zone_y2, width_display, zone_y1);
+    } else {
+        canvas_display_context.fillRect(0, 0, zone_x1, height_display);
+        canvas_display_context.fillRect(zone_x2, 0, zone_x1, height_display);
     }
 
     if ( ! is_passport_detected) {
@@ -1334,6 +1452,132 @@ function frame_processing() {
         return STATUS_DONT_MOVE_PASSPORT;
     }
     
+    // flare detection:
+    let image_up_page_internal_crop_1_mean_color_ImageData = image_up_page_internal_crop_1_hidden_context.getImageData(0, 0, 1, 1);
+    let image_up_page_internal_crop_1_mean_color = image_up_page_internal_crop_1_mean_color_ImageData.data;
+    //console.log(image_up_page_internal_crop_1_mean_color) // Uint8ClampedArray(4) [242, 240, 236, 255]
+    
+    let image_up_page_internal_crop_2_mean_color_ImageData = image_up_page_internal_crop_2_hidden_context.getImageData(0, 0, 1, 1);
+    let image_up_page_internal_crop_2_mean_color = image_up_page_internal_crop_2_mean_color_ImageData.data;
+    
+    let passport_brightness_estimation_colors_R = (dxc1 * image_up_page_internal_crop_1_mean_color[0] + dxc2 * image_up_page_internal_crop_2_mean_color[0]) / (dxc1 + dxc2) / 255.0;
+    let passport_brightness_estimation_colors_G = (dxc1 * image_up_page_internal_crop_1_mean_color[1] + dxc2 * image_up_page_internal_crop_2_mean_color[1]) / (dxc1 + dxc2) / 255.0;
+    let passport_brightness_estimation_colors_B = (dxc1 * image_up_page_internal_crop_1_mean_color[2] + dxc2 * image_up_page_internal_crop_2_mean_color[2]) / (dxc1 + dxc2) / 255.0;
+    
+    let brightness_amplifier_r_tmp = BRIGHTNESS_APMPLIFIER / passport_brightness_estimation_colors_R / 255.0; // 255 to not do division on 255 in tf.tidy
+    let brightness_amplifier_g_tmp = BRIGHTNESS_APMPLIFIER / passport_brightness_estimation_colors_G / 255.0;
+    let brightness_amplifier_b_tmp = BRIGHTNESS_APMPLIFIER / passport_brightness_estimation_colors_B / 255.0;
+    
+    // prepare masks:
+    for (let index_tmp = 0; index_tmp < PASSPORT_N_POINTS; index_tmp++) {
+        points_cropped[index_tmp][0] = NET_INPUT_SIZE_X_FLARE * (points[index_tmp][0] - x1_for_flare) / dx_for_flare;
+        points_cropped[index_tmp][1] = NET_INPUT_SIZE_Y_FLARE * (points[index_tmp][1] - y1_for_flare) / dy_for_flare;
+    }
+    
+    flare_masks_hidden_context.fillStyle = BLACK;
+    flare_masks_hidden_context.fillRect(0, 0, NET_INPUT_SIZE_X_FLARE, NET_INPUT_SIZE_Y_FLARE);
+    
+    flare_masks_hidden_context.fillStyle = RED;
+    flare_masks_hidden_context.beginPath();
+    flare_masks_hidden_context.moveTo(points_cropped[0][0], points_cropped[0][1]);
+    flare_masks_hidden_context.lineTo(points_cropped[1][0], points_cropped[1][1]);
+    flare_masks_hidden_context.lineTo(points_cropped[2][0], points_cropped[2][1]);
+    flare_masks_hidden_context.lineTo(points_cropped[5][0], points_cropped[5][1]);
+    flare_masks_hidden_context.closePath();
+    flare_masks_hidden_context.fill();
+    
+    flare_masks_hidden_context.fillStyle = GREEN;
+    flare_masks_hidden_context.beginPath();
+    flare_masks_hidden_context.moveTo(points_cropped[5][0], points_cropped[5][1]);
+    flare_masks_hidden_context.lineTo(points_cropped[2][0], points_cropped[2][1]);
+    flare_masks_hidden_context.lineTo(points_cropped[3][0], points_cropped[3][1]);
+    flare_masks_hidden_context.lineTo(points_cropped[4][0], points_cropped[4][1]);
+    flare_masks_hidden_context.closePath();
+    flare_masks_hidden_context.fill();
+    
+    
+    let tmp2_direction_horizontal_x = points_cropped[2][0] - points_cropped[5][0];
+    let tmp2_direction_horizontal_y = points_cropped[2][1] - points_cropped[5][1];
+    
+    let tmp2_direction_verticle_x = points_cropped[4][0] - points_cropped[5][0];
+    let tmp2_direction_verticle_y = points_cropped[4][1] - points_cropped[5][1];
+    
+    let person_photo_tmp2_x1 = points_cropped[5][0] + tmp2_direction_horizontal_x * PERSON_PHOTO_X1_RELATIVE + tmp2_direction_verticle_x * PERSON_PHOTO_Y1_RELATIVE;
+    let person_photo_tmp2_y1 = points_cropped[5][1] + tmp2_direction_horizontal_y * PERSON_PHOTO_X1_RELATIVE + tmp2_direction_verticle_y * PERSON_PHOTO_Y1_RELATIVE;
+    
+    let person_photo_tmp2_x2 = points_cropped[5][0] + tmp2_direction_horizontal_x * PERSON_PHOTO_X2_RELATIVE + tmp2_direction_verticle_x * PERSON_PHOTO_Y1_RELATIVE;
+    let person_photo_tmp2_y2 = points_cropped[5][1] + tmp2_direction_horizontal_y * PERSON_PHOTO_X2_RELATIVE + tmp2_direction_verticle_y * PERSON_PHOTO_Y1_RELATIVE;
+    
+    let person_photo_tmp2_x3 = points_cropped[5][0] + tmp2_direction_horizontal_x * PERSON_PHOTO_X2_RELATIVE + tmp2_direction_verticle_x * PERSON_PHOTO_Y2_RELATIVE;
+    let person_photo_tmp2_y3 = points_cropped[5][1] + tmp2_direction_horizontal_y * PERSON_PHOTO_X2_RELATIVE + tmp2_direction_verticle_y * PERSON_PHOTO_Y2_RELATIVE;
+    
+    let person_photo_tmp2_x4 = points_cropped[5][0] + tmp2_direction_horizontal_x * PERSON_PHOTO_X1_RELATIVE + tmp2_direction_verticle_x * PERSON_PHOTO_Y2_RELATIVE;
+    let person_photo_tmp2_y4 = points_cropped[5][1] + tmp2_direction_horizontal_y * PERSON_PHOTO_X1_RELATIVE + tmp2_direction_verticle_y * PERSON_PHOTO_Y2_RELATIVE;
+    
+    flare_masks_hidden_context.fillStyle = CYAN;
+    flare_masks_hidden_context.beginPath();
+    flare_masks_hidden_context.moveTo(person_photo_tmp2_x1, person_photo_tmp2_y1);
+    flare_masks_hidden_context.lineTo(person_photo_tmp2_x2, person_photo_tmp2_y2);
+    flare_masks_hidden_context.lineTo(person_photo_tmp2_x3, person_photo_tmp2_y3);
+    flare_masks_hidden_context.lineTo(person_photo_tmp2_x4, person_photo_tmp2_y4);
+    flare_masks_hidden_context.closePath();
+    flare_masks_hidden_context.fill();
+    
+    
+    
+    const tf_processing_flare = tf.tidy(() => {
+    
+        frame_tf = tf.browser.fromPixels(passport_crop_hidden, N_INPUT_CHANNELS_FLARE).toFloat();
+        const brightness_amplifiers_tf = tf.tensor([brightness_amplifier_r_tmp, brightness_amplifier_g_tmp, brightness_amplifier_b_tmp], [1, 1, 3]);
+        const frame_normailzed_tf = frame_tf.mul(brightness_amplifiers_tf);
+        
+        masks_tf = tf.browser.fromPixels(flare_masks_hidden, 3).toFloat();
+        const normalizator = tf.scalar(255.0);
+        const masks_normalized_tf = masks_tf.div(normalizator);
+        
+        const input_tf = tf.concat([frame_normailzed_tf, masks_normalized_tf], 2);
+        const input_batched_tf = input_tf.reshape([1, NET_INPUT_SIZE_Y_FLARE, NET_INPUT_SIZE_X_FLARE, N_INPUT_CHANNELS_ALL_FLARE]);
+        //const prediction = net_flare.predict(input_batched_tf).squeeze().clipByValue(0, 1);
+        const prediction = net_flare.predict(input_batched_tf).squeeze();
+        return prediction;
+    });
+    let heatmap_data_flare = tf_processing_flare.dataSync();
+    //console.log(heatmap_data_flare) // Float32Array(816)
+    
+    //<canvas id="canvas_flare_tmp" width=24 height=34></canvas>
+    //var image_data_uint8_tmp = new Uint8ClampedArray(NET_OUTPUT_SIZE_X_FLARE * NET_OUTPUT_SIZE_Y_FLARE * 4);
+    //let pixel_index_4_tmp = 0;
+    //for (let pixel_index_tmp = 0; pixel_index_tmp < NET_OUTPUT_SIZE_X_FLARE * NET_OUTPUT_SIZE_Y_FLARE; pixel_index_tmp++){
+    //    let pixle_value_tmp = heatmap_data_flare[pixel_index_tmp] * 255.0;
+    //    if (pixle_value_tmp > 255.0) {
+    //        pixle_value_tmp = 255.0;
+    //    }
+    //    image_data_uint8_tmp[pixel_index_4_tmp] = pixle_value_tmp;
+    //    image_data_uint8_tmp[pixel_index_4_tmp + 1] = image_data_uint8_tmp[pixel_index_4_tmp];
+    //    image_data_uint8_tmp[pixel_index_4_tmp + 2] = image_data_uint8_tmp[pixel_index_4_tmp];
+    //    image_data_uint8_tmp[pixel_index_4_tmp + 3] = 255;
+    //    pixel_index_4_tmp += 4;
+    //}
+    //var image_data_tmp = new ImageData(image_data_uint8_tmp, NET_OUTPUT_SIZE_X_FLARE, NET_OUTPUT_SIZE_Y_FLARE);
+    //canvas_flare_tmp_context.putImageData(image_data_tmp, 0, 0);
+    
+    
+    let flare_brightness = 0.0;
+    for (let pixel_index_tmp = 0; pixel_index_tmp < NET_OUTPUT_SIZE_FLARE; pixel_index_tmp++) {
+        flare_brightness += heatmap_data_flare[pixel_index_tmp];
+    }
+    //console.log(flare_brightness);
+    
+    let flare_detected = false;
+    if (flare_brightness >= FLARE_BRIGHTNESS_THRESHOLD) {
+        flare_detected = true;
+    }
+    
+    if (flare_detected) {
+        return STATUS_FLARE_DETECTED;
+    }
+    
+    
     let success_delay_done = false;
     if (success_frame_no >= START_PHOTO_AT_SUCCESS_FRAME_NO) {
         success_delay_done = true;
@@ -1377,7 +1621,12 @@ function step() {
                     let timeDeltaSec = timeDelta / 1000;
                     FPS = N_FRAMES_FPS_COUNT / timeDeltaSec;
                     timeForFPSCountOld = timeForFPSCount;
-                    FPSElement.innerHTML = "FPS: " + FPS.toString(10);
+                    
+                    time_predict_mean = time_predict_sum / time_predict_n;
+                    time_predict_sum = 0;
+                    time_predict_n = 0;
+                    
+                    FPSElement.innerHTML = "FPS: " + FPS.toString(10) + "  " + time_predict_mean.toString(10);
                     CountFPSIndex++;
                 }
               
@@ -1493,6 +1742,24 @@ function prepare_global_variables() {
     slow_motion_dist_threshold_per_sec = SLOW_MOTION_DIST_THRESHOLD_RELATIVE_PER_SEC * pasport_height_estimation_display;
     
     slow_changing_status = new SlowChangingStatus(PAUSE_LENGTH_DOWN, PAUSE_LENGTH_UP);
+    
+    // warm up nets:
+    
+    const tf_processing_warm_up = tf.tidy(() => {
+        const frame_batched_tf = tf.zeros([1, net_input_size_y, net_input_size_x, N_CHANNELS], tf.float32);
+        const prediction = net.predict(frame_batched_tf).squeeze().clipByValue(0, 1);
+        return tf.unstack(prediction, 2);
+    });
+    for(let hitmap_index = 0; hitmap_index < PASSPORT_N_POINTS; hitmap_index++) {
+        let heatmap_data_warm_up = tf_processing_warm_up[hitmap_index].dataSync();
+    }
+    
+    const tf_processing_flare_warm_up = tf.tidy(() => {
+        const input_batched_tf = tf.zeros([1, NET_INPUT_SIZE_Y_FLARE, NET_INPUT_SIZE_X_FLARE, N_INPUT_CHANNELS_ALL_FLARE], tf.float32);
+        const prediction = net_flare.predict(input_batched_tf).squeeze().clipByValue(0, 1);
+        return prediction;
+    });
+    let heatmap_data_flare_warm_up = tf_processing_flare_warm_up.dataSync();
     
     //status(5);
     statusElement.innerHTML = 'Загрузка...';
@@ -1869,20 +2136,21 @@ function start_camera() {
 
 const main = async () => {
     net = await tf.loadGraphModel(MODEL_PATH);
+    net_flare = await tf.loadGraphModel(MODEL_PATH_FLARE)
     start_camera();
 }
 
-(function () {
-    var old = console.log;
-    var logger = document.getElementById('log');
-    console.log = function (message) {
-        if (typeof message == 'object') {
-            logger.innerHTML += (JSON && JSON.stringify ? JSON.stringify(message) : message) + '<br />';
-        } else {
-            logger.innerHTML += message + '<br />';
-        }
-    }
-})();
+//(function () {
+//    var old = console.log;
+//    var logger = document.getElementById('log');
+//    console.log = function (message) {
+//        if (typeof message == 'object') {
+//            logger.innerHTML += (JSON && JSON.stringify ? JSON.stringify(message) : message) + '<br />';
+//        } else {
+//            logger.innerHTML += message + '<br />';
+//        }
+//    }
+//})();
 
 window.onerror = function(e){
     console.log(e.toString());
